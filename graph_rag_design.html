@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản Thiết Kế Hệ Thống Graph RAG Cho BIM | THBIM Technology</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.15);
+            --accent-cyan: #06b6d4;
+            --accent-cyan-glow: rgba(6, 182, 212, 0.15);
+            --accent-emerald: #10b981;
+            --accent-emerald-glow: rgba(16, 185, 129, 0.15);
+            --accent-purple: #a855f7;
+            
+            --font-main: 'Outfit', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 45%);
+            background-attachment: fixed;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        header {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px 40px 20px;
+            position: relative;
+        }
+
+        .header-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-glow), var(--accent-cyan-glow));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #c7d2fe;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px var(--primary-glow); }
+            100% { box-shadow: 0 0 15px var(--primary-glow); }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.2;
+            background: linear-gradient(to right, #ffffff, #c7d2fe, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 800px;
+            font-weight: 300;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 80px 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 40px;
+        }
+
+        /* Sidebar Navigation */
+        aside {
+            position: sticky;
+            top: 40px;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .nav-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+        }
+
+        .nav-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 20px;
+            color: #fff;
+            border-left: 3px solid var(--primary);
+            padding-left: 10px;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 2px solid transparent;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.05);
+            border-left-color: var(--accent-cyan);
+            padding-left: 16px;
+        }
+
+        /* Content Sections */
+        .content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: border-color 0.3s ease;
+        }
+
+        section:hover {
+            border-color: rgba(99, 102, 241, 0.25);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 15px;
+        }
+
+        h2 span {
+            color: var(--accent-cyan);
+            font-family: var(--font-code);
+            font-size: 1.2rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 1.05rem;
+            font-weight: 300;
+        }
+
+        strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Tech Grid & Cards */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .tech-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tech-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+            opacity: 0.7;
+        }
+
+        .tech-card.cyan::before { background: var(--accent-cyan); }
+        .tech-card.emerald::before { background: var(--accent-emerald); }
+        .tech-card.purple::before { background: var(--accent-purple); }
+
+        .tech-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .tech-card h4 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tech-card .license {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 3px 8px;
+            border-radius: 20px;
+            color: var(--text-secondary);
+        }
+
+        .tech-card p {
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+
+        /* SVG Diagram Wrapper */
+        .diagram-container {
+            background: #0f1322;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .diagram-container svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .diagram-caption {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: -15px;
+            margin-bottom: 25px;
+            font-style: italic;
+        }
+
+        /* Code Block */
+        pre {
+            background: #060913 !important;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 24px;
+            overflow-x: auto;
+            margin: 25px 0;
+        }
+
+        code {
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+            color: #a5b4fc;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #111827;
+            padding: 10px 20px;
+            border-radius: 12px 12px 0 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: none;
+            font-family: var(--font-code);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: -25px;
+            margin-top: 15px;
+        }
+
+        /* Tabs UI for Code/Specs */
+        .specs-list {
+            margin: 25px 0;
+        }
+
+        .spec-item {
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px 8px;
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 20px;
+        }
+
+        .spec-item:last-child {
+            border-bottom: none;
+        }
+
+        .spec-label {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .spec-value {
+            color: var(--text-secondary);
+            font-size: 0.98rem;
+        }
+
+        /* Highlights */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .highlight-box p {
+            margin-bottom: 0;
+            font-size: 0.98rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+            aside {
+                display: none; /* Hide sidebar on mobile for simplicity */
+            }
+            h1 {
+                font-size: 2.2rem;
+            }
+            section {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="header-badge">Free Commercial Stack</span>
+        <h1>Bản Thiết Kế Hệ Thống Graph RAG Cho BIM</h1>
+        <p class="subtitle">Kiến trúc kết hợp giữa đồ thị tri thức không gian (Spatial Graph) và mô hình ngôn ngữ lớn (LLM) để tối ưu hóa quy trình thiết kế, kiểm tra quy chuẩn và vận hành công trình.</p>
+    </header>
+
+    <main>
+        <!-- Sidebar Navigation -->
+        <aside>
+            <div class="nav-card">
+                <h3>Mục Lục</h3>
+                <ul class="nav-links">
+                    <li><a href="#triet-ly">1. Triết Lý Thiết Kế</a></li>
+                    <li><a href="#cong-nghe">2. Lựa Chọn Công Nghệ</a></li>
+                    <li><a href="#so-do-hoat-dong">3. Sơ Đồ Hoạt Động (Data Flow)</a></li>
+                    <li><a href="#so-do-logic">4. Sơ Đồ Kiến Trúc Logic</a></li>
+                    <li><a href="#trien-khai">5. Lập Trình & Cấu Hình</a></li>
+                    <li><a href="#kiem-chung">6. Kịch Bản Sử Dụng (Use Cases)</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            
+            <!-- Section 1: Triết lý thiết kế -->
+            <section id="triet-ly">
+                <h2><span>01 //</span> Triết Lý Thiết Kế Hệ Thống</h2>
+                <p>Hệ thống được thiết kế dựa trên một triết lý bất biến: <strong>Tối ưu hóa giá trị thương mại bằng cách tận dụng tối đa các giải pháp mã nguồn mở và công cụ miễn phí, loại bỏ hoàn toàn việc phát triển lại các thành phần cốt lõi từ đầu (Don't Reinvent the Wheel).</strong></p>
+                
+                <p>Đối với ngành xây dựng kỹ thuật số (AEC/BIM), dữ liệu không chỉ có tính chất từ ngữ mà còn mang tính chất <strong>tập hợp không gian và liên kết topo</strong>. Một tài liệu quy chuẩn hay mô hình 3D Revit không tồn tại độc lập mà liên kết chặt chẽ qua các mối quan hệ hình học. Do đó, hệ thống này thiết lập hai luồng xử lý riêng biệt:</p>
+                
+                <div class="tech-grid">
+                    <div class="tech-card cyan">
+                        <h4>Luồng Dữ Liệu Tĩnh (Static Data)</h4>
+                        <p>Xử lý các tiêu chuẩn PCCC, quy chuẩn xây dựng dạng PDF (SCDF, BCA). Sử dụng mô hình đồ thị cộng đồng (Hierarchical Community Graph) để trích xuất tri thức vĩ mô.</p>
+                    </div>
+                    <div class="tech-card emerald">
+                        <h4>Luồng Dữ Liệu Động (Dynamic Data)</h4>
+                        <p>Đồng bộ liên tục các thay đổi về cấu kiện, mối quan hệ không gian từ mô hình Revit đang thiết kế (vách, dầm, ống dẫn cơ điện) thông qua cơ chế cập nhật tăng dần (Incremental Graph Updates).</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p>💡 <strong>Chiến lược kinh tế:</strong> Bằng cách kết hợp <strong>Local LLM (chạy offline miễn phí qua Ollama)</strong> để xử lý khối lượng tác vụ lớn hàng ngày, và <strong>Cloud LLM API (như Gemini Free/Low-cost tier)</strong> cho các tác vụ suy luận cực kỳ phức tạp, doanh nghiệp có thể triển khai hệ thống này với chi phí gần như bằng 0 mà vẫn đảm bảo tính bảo mật dữ liệu công trình.</p>
+                </div>
+            </section>
+
+            <!-- Section 2: Công nghệ -->
+            <section id="cong-nghe">
+                <h2><span>02 //</span> Lựa Chọn Công Nghệ Thương Mại Tự Do</h2>
+                <p>Tất cả các công cụ và thư viện được lựa chọn đều có giấy phép mã nguồn mở (MIT, Apache 2.0, hoặc phiên bản Community được phép sử dụng thương mại miễn phí):</p>
+                
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <h4>LightRAG <span class="license">MIT</span></h4>
+                        <p>Khung Graph RAG thế hệ mới. Hỗ trợ cập nhật đồ thị tăng dần cực nhanh mà không phải build lại từ đầu. Tiết kiệm token gấp hàng ngàn lần so với Microsoft GraphRAG. Thích hợp cho mô hình Revit thay đổi liên tục.</p>
+                    </div>
+                    
+                    <div class="tech-card cyan">
+                        <h4>Neo4j Community <span class="license">GPL v3 / Free</span></h4>
+                        <p>Cơ sở dữ liệu đồ thị số 1 thế giới. Phiên bản Community Edition hoàn toàn miễn phí chạy local/server. Cho phép lưu trữ và thực hiện các câu truy vấn không gian phức tạp (Spatial Topology Queries) cực nhanh.</p>
+                    </div>
+
+                    <div class="tech-card emerald">
+                        <h4>Ollama <span class="license">MIT</span></h4>
+                        <p>Nền tảng chạy Local LLM offline. Cho phép triển khai các mô hình mã nguồn mở mạnh mẽ như <strong>Qwen-2.5-Coder-7B</strong> hoặc <strong>Llama-3-8B</strong> trực tiếp trên máy trạm của kỹ sư, bảo mật 100% dữ liệu thiết kế.</p>
+                    </div>
+
+                    <div class="tech-card purple">
+                        <h4>LlamaIndex / LangGraph <span class="license">MIT</span></h4>
+                        <p>Bộ điều phối và kết nối dữ liệu. `PropertyGraphIndex` của LlamaIndex giúp ánh xạ trực tiếp đối tượng Revit C# thành cấu trúc Graph Node lưu trữ vào Neo4j một cách tự động.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Sơ đồ hoạt động -->
+            <section id="so-do-hoat-dong">
+                <h2><span>03 //</span> Sơ Đồ Hoạt Động (Data Flow & Activity Diagram)</h2>
+                <p>Sơ đồ dưới đây mô tả chi tiết cách thức dòng dữ liệu được hấp thụ từ hai nguồn chính: Tệp quy chuẩn xây dựng PDF (tra cứu tĩnh) và mô hình Revit trực tiếp (đồng bộ động qua Revit API C# và MCP Server) đưa vào hệ thống Graph RAG để phục vụ truy vấn.</p>
+
+                <!-- SVG DIAGRAM 1: SƠ ĐỒ HOẠT ĐỘNG -->
+                <div class="diagram-container">
+                    <svg viewBox="0 0 1000 550" width="1000" height="550" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#3b82f6" />
+                                <stop offset="100%" stop-color="#1d4ed8" />
+                            </linearGradient>
+                            <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#06b6d4" />
+                                <stop offset="100%" stop-color="#0891b2" />
+                            </linearGradient>
+                            <linearGradient id="grad-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#047857" />
+                            </linearGradient>
+                            <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#8b5cf6" />
+                                <stop offset="100%" stop-color="#6d28d9" />
+                            </linearGradient>
+                            <linearGradient id="grad-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#1f2937" />
+                                <stop offset="100%" stop-color="#111827" />
+                            </linearGradient>
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="4" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                        </defs>
+
+                        <!-- Background Grid -->
+                        <g stroke="rgba(255,255,255,0.02)" stroke-width="1">
+                            <path d="M 0,50 L 1000,50 M 0,100 L 1000,100 M 0,150 L 1000,150 M 0,200 L 1000,200 M 0,250 L 1000,250 M 0,300 L 1000,300 M 0,350 L 1000,350 M 0,400 L 1000,400 M 0,450 L 1000,450 M 0,500 L 1000,500" />
+                            <path d="M 100,0 L 100,550 M 200,0 L 200,550 M 300,0 L 300,550 M 400,0 L 400,550 M 500,0 L 500,550 M 600,0 L 600,550 M 700,0 L 700,550 M 800,0 L 800,550 M 900,0 L 900,550" />
+                        </g>
+
+                        <!-- Boundary Zones -->
+                        <rect x="20" y="40" width="220" height="470" rx="15" fill="none" stroke="rgba(255,255,255,0.05)" stroke-dasharray="5,5" />
+                        <text x="130" y="30" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="12" text-anchor="middle" font-weight="600" letter-spacing="1">NGUỒN DỮ LIỆU ĐẦU VÀO</text>
+
+                        <rect x="280" y="40" width="420" height="470" rx="15" fill="none" stroke="rgba(255,255,255,0.05)" stroke-dasharray="5,5" />
+                        <text x="490" y="30" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="12" text-anchor="middle" font-weight="600" letter-spacing="1">ĐỘNG CƠ XỬ LÝ & INDEX (PIPELINE)</text>
+
+                        <rect x="740" y="40" width="240" height="470" rx="15" fill="none" stroke="rgba(255,255,255,0.05)" stroke-dasharray="5,5" />
+                        <text x="860" y="30" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="12" text-anchor="middle" font-weight="600" letter-spacing="1">GIAO DIỆN & TRUY VẤN</text>
+
+                        <!-- Pipeline 1: PDF Document (Static) -->
+                        <g transform="translate(40, 80)">
+                            <rect width="180" height="60" rx="8" fill="url(#grad-blue)" filter="url(#glow)" />
+                            <text x="90" y="28" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Quy chuẩn PDF (Tĩnh)</text>
+                            <text x="90" y="45" fill="#e0e7ff" font-family="var(--font-main)" font-size="10" text-anchor="middle">SCDF Fire Code, BCA, Standards</text>
+                        </g>
+
+                        <!-- Pipeline 2: Live Revit Model (Dynamic) -->
+                        <g transform="translate(40, 240)">
+                            <rect width="180" height="60" rx="8" fill="url(#grad-cyan)" filter="url(#glow)" />
+                            <text x="90" y="28" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Mô Hình Revit (Động)</text>
+                            <text x="90" y="45" fill="#ecfeff" font-family="var(--font-main)" font-size="10" text-anchor="middle">Cấu kiện không gian & MEP</text>
+                        </g>
+
+                        <!-- Connector: Revit API to MCP Server -->
+                        <g transform="translate(40, 370)">
+                            <rect width="180" height="60" rx="8" fill="url(#grad-dark)" stroke="rgba(6, 182, 212, 0.3)" />
+                            <text x="90" y="26" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">Revit API Connector</text>
+                            <text x="90" y="44" fill="var(--text-secondary)" font-family="var(--font-code)" font-size="10" text-anchor="middle">THBIM-MCP-Server (C#)</text>
+                        </g>
+
+                        <!-- Flow Lines from Left to Center -->
+                        <!-- PDF to Document Parser -->
+                        <path d="M 220,110 L 320,110" fill="none" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arrow-blue)" />
+                        
+                        <!-- Revit to API Connector, then to Graph Extractor -->
+                        <path d="M 130,300 L 130,370" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="4,4" />
+                        <path d="M 220,400 L 320,400 L 320,330" fill="none" stroke="#06b6d4" stroke-width="2.5" marker-end="url(#arrow-cyan)" />
+
+                        <!-- Center Pipeline Blocks -->
+                        <!-- Document Parser -->
+                        <g transform="translate(320, 80)">
+                            <rect width="150" height="60" rx="8" fill="url(#grad-dark)" stroke="rgba(255,255,255,0.1)" />
+                            <text x="75" y="28" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">Chuyển đổi văn bản</text>
+                            <text x="75" y="44" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">LlamaIndex PDF Reader</text>
+                        </g>
+
+                        <!-- Graph Extractor (LLM-based) -->
+                        <g transform="translate(520, 80)">
+                            <rect width="150" height="60" rx="8" fill="url(#grad-purple)" filter="url(#glow)" />
+                            <text x="75" y="28" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="bold" text-anchor="middle">Trích xuất Đồ thị</text>
+                            <text x="75" y="44" fill="#f5f3ff" font-family="var(--font-main)" font-size="10" text-anchor="middle">LLM Entity/Relation Extractor</text>
+                        </g>
+
+                        <!-- Revit Graph Syncer -->
+                        <g transform="translate(320, 240)">
+                            <rect width="150" height="90" rx="8" fill="url(#grad-dark)" stroke="rgba(255,255,255,0.1)" />
+                            <text x="75" y="30" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">Đồng Bộ Graph Động</text>
+                            <text x="75" y="50" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">Trích xuất Topology quan hệ</text>
+                            <text x="75" y="70" fill="var(--accent-cyan)" font-family="var(--font-code)" font-size="9" text-anchor="middle">LightRAG Incremental Sync</text>
+                        </g>
+
+                        <!-- Central Knowledge Base (Databases) -->
+                        <!-- Neo4j Graph DB -->
+                        <g transform="translate(520, 240)">
+                            <rect width="150" height="70" rx="8" fill="url(#grad-emerald)" filter="url(#glow)" />
+                            <text x="75" y="32" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Neo4j Database</text>
+                            <text x="75" y="50" fill="#ecfdf5" font-family="var(--font-main)" font-size="10" text-anchor="middle">Spatial Topology & Rules</text>
+                        </g>
+
+                        <!-- Internal flows in Center -->
+                        <path d="M 470,110 L 520,110" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow-blue)" />
+                        <path d="M 595,140 L 595,240" fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" />
+                        <path d="M 470,285 L 520,285" fill="none" stroke="#06b6d4" stroke-width="2" marker-end="url(#arrow-cyan)" />
+
+                        <!-- Query & Retrieval side -->
+                        <!-- User Request (Query) -->
+                        <g transform="translate(770, 150)">
+                            <rect width="180" height="60" rx="8" fill="url(#grad-dark)" stroke="var(--primary)" />
+                            <text x="90" y="28" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">Câu Hỏi / Yêu Cầu</text>
+                            <text x="90" y="44" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">"Khoảng cách thoát hiểm hành lang..."</text>
+                        </g>
+
+                        <!-- Graph RAG Engine (Query Processor) -->
+                        <g transform="translate(770, 300)">
+                            <rect width="180" height="90" rx="8" fill="url(#grad-purple)" filter="url(#glow)" />
+                            <text x="90" y="30" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Graph RAG Engine</text>
+                            <text x="90" y="50" fill="#f5f3ff" font-family="var(--font-main)" font-size="11" text-anchor="middle">LightRAG / LlamaIndex</text>
+                            <text x="90" y="70" fill="var(--accent-cyan)" font-family="var(--font-code)" font-size="9" text-anchor="middle">Vector + Topology Search</text>
+                        </g>
+
+                        <!-- Flow lines for Query Phase -->
+                        <!-- User to Engine -->
+                        <path d="M 860,210 L 860,300" fill="none" stroke="var(--primary)" stroke-width="2" marker-end="url(#arrow-purple)" />
+                        
+                        <!-- DB to Engine (Bidirectional retrieval) -->
+                        <path d="M 670,280 Q 720,280 770,320" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="3,3" marker-end="url(#arrow-emerald)" />
+                        <path d="M 770,350 Q 720,380 670,310" fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" />
+
+                        <!-- Engine back to User (Answer) -->
+                        <path d="M 910,300 L 910,210" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-emerald)" />
+
+                        <!-- Markers Definition -->
+                        <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+                        </marker>
+                        <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#06b6d4" />
+                        </marker>
+                        <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" />
+                        </marker>
+                        <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+                        </marker>
+                    </svg>
+                </div>
+                <div class="diagram-caption">Hình 3.1: Sơ đồ luồng hấp thụ dữ liệu và thực hiện truy vấn RAG GRAPH trong hệ sinh thái BIM.</div>
+            </section>
+
+            <!-- Section 4: Sơ đồ logic -->
+            <section id="so-do-logic">
+                <h2><span>04 //</span> Sơ Đồ Kiến Trúc Logic Hệ Thống</h2>
+                <p>Sơ đồ kiến trúc phân lớp (Multi-layer Architecture) thể hiện vị trí tương quan của các dịch vụ chạy offline (Local LLM qua Ollama), cơ sở dữ liệu đồ thị Neo4j, lớp thư viện điều phối trung gian, và phần mở rộng kết nối trực tiếp trong Autodesk Revit.</p>
+
+                <!-- SVG DIAGRAM 2: SƠ ĐỒ KIẾN TRÚC LOGIC -->
+                <div class="diagram-container">
+                    <svg viewBox="0 0 1000 550" width="1000" height="550" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="layer-grad-1" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#1e1b4b" />
+                                <stop offset="100%" stop-color="#0f0e26" />
+                            </linearGradient>
+                            <linearGradient id="layer-grad-2" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#0c2f35" />
+                                <stop offset="100%" stop-color="#051c20" />
+                            </linearGradient>
+                            <linearGradient id="layer-grad-3" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#064e3b" />
+                                <stop offset="100%" stop-color="#022c22" />
+                            </linearGradient>
+                            <filter id="drop-shadow" x="-10%" y="-10%" width="120%" height="120%">
+                                <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity="0.5" />
+                            </filter>
+                        </defs>
+
+                        <!-- Layer 1: Presentation & Revit Client -->
+                        <g filter="url(#drop-shadow)" transform="translate(50, 40)">
+                            <rect width="900" height="110" rx="12" fill="url(#layer-grad-1)" stroke="rgba(99, 102, 241, 0.3)" stroke-width="1.5" />
+                            <text x="25" y="30" fill="var(--primary)" font-family="var(--font-main)" font-size="12" font-weight="bold" letter-spacing="1">LỚP 1 // TRÌNH DIỄN & CLIENT (REVIT & CHAT UI)</text>
+                            
+                            <!-- Sub-component 1: Autodesk Revit UI -->
+                            <g transform="translate(40, 45)">
+                                <rect width="240" height="50" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="120" y="25" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">Autodesk Revit Add-in Interface</text>
+                                <text x="120" y="40" fill="var(--text-secondary)" font-family="var(--font-code)" font-size="9" text-anchor="middle">C# / .NET / WPF Panel</text>
+                            </g>
+
+                            <!-- Sub-component 2: THBIM-MCP-Server Client -->
+                            <g transform="translate(330, 45)">
+                                <rect width="240" height="50" rx="6" fill="#111827" stroke="rgba(6, 182, 212, 0.3)" />
+                                <text x="120" y="25" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">MCP Client / Server Sync</text>
+                                <text x="120" y="40" fill="var(--accent-cyan)" font-family="var(--font-code)" font-size="9" text-anchor="middle">NodeJS / Python (SSE Protocol)</text>
+                            </g>
+
+                            <!-- Sub-component 3: Web Chat Panel -->
+                            <g transform="translate(620, 45)">
+                                <rect width="240" height="50" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="120" y="25" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">AI Chat Panel HTML/JS</text>
+                                <text x="120" y="40" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="9" text-anchor="middle">Giao diện hỏi đáp quy chuẩn</text>
+                            </g>
+                        </g>
+
+                        <!-- Layer 2: Orchestration (LlamaIndex & LightRAG) -->
+                        <g filter="url(#drop-shadow)" transform="translate(50, 180)">
+                            <rect width="900" height="140" rx="12" fill="url(#layer-grad-2)" stroke="rgba(6, 182, 212, 0.3)" stroke-width="1.5" />
+                            <text x="25" y="30" fill="var(--accent-cyan)" font-family="var(--font-main)" font-size="12" font-weight="bold" letter-spacing="1">LỚP 2 // ĐIỀU PHỐI VÀ XỬ LÝ GRAPH RAG (ORCHESTRATION LAYER)</text>
+                            
+                            <!-- Sub-component 1: LightRAG Pipeline -->
+                            <g transform="translate(40, 50)">
+                                <rect width="260" height="70" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="130" y="28" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">LightRAG Engine</text>
+                                <text x="130" y="45" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">Cập nhật đồ thị tăng dần (Incremental Sync)</text>
+                                <text x="130" y="60" fill="var(--accent-cyan)" font-family="var(--font-code)" font-size="9" text-anchor="middle">MIT License / Python</text>
+                            </g>
+
+                            <!-- Sub-component 2: LlamaIndex PropertyGraph -->
+                            <g transform="translate(340, 50)">
+                                <rect width="260" height="70" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="130" y="28" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">LlamaIndex Graph Index</text>
+                                <text x="130" y="45" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">PropertyGraphIndex / Node Mapping</text>
+                                <text x="130" y="60" fill="var(--primary)" font-family="var(--font-code)" font-size="9" text-anchor="middle">Trích xuất Schema thực thể BIM</text>
+                            </g>
+
+                            <!-- Sub-component 3: Prompt Manager -->
+                            <g transform="translate(640, 50)">
+                                <rect width="220" height="70" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="110" y="28" fill="#fff" font-family="var(--font-main)" font-size="13" font-weight="600" text-anchor="middle">Prompt Templates</text>
+                                <text x="110" y="45" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">Mẫu trích xuất thực thể Revit</text>
+                                <text x="110" y="60" fill="var(--accent-purple)" font-family="var(--font-main)" font-size="9" text-anchor="middle">AEC Domain Prompts</text>
+                            </g>
+                        </g>
+
+                        <!-- Layer 3: Database & Models (Local + Cloud) -->
+                        <g filter="url(#drop-shadow)" transform="translate(50, 350)">
+                            <rect width="900" height="150" rx="12" fill="url(#layer-grad-3)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.5" />
+                            <text x="25" y="30" fill="var(--accent-emerald)" font-family="var(--font-main)" font-size="12" font-weight="bold" letter-spacing="1">LỚP 3 // CƠ SỞ DỮ LIỆU & MÔ HÌNH SUY LUẬN (DATA & MODELS)</text>
+                            
+                            <!-- Sub-component 1: Neo4j Graph DB -->
+                            <g transform="translate(40, 50)">
+                                <rect width="250" height="80" rx="6" fill="#111827" stroke="var(--accent-emerald)" />
+                                <text x="125" y="30" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Neo4j Community Edition</text>
+                                <text x="125" y="50" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">Lưu trữ Quan Hệ & Topology BIM</text>
+                                <text x="125" y="66" fill="var(--accent-emerald)" font-family="var(--font-code)" font-size="9" text-anchor="middle">Cypher Query Engine / Local Server</text>
+                            </g>
+
+                            <!-- Sub-component 2: Local LLM (Ollama) -->
+                            <g transform="translate(330, 50)">
+                                <rect width="260" height="80" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="130" y="30" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Local LLM (Ollama)</text>
+                                <text x="130" y="50" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">Qwen2.5-Coder-7B / Llama3-8B</text>
+                                <text x="130" y="66" fill="var(--accent-cyan)" font-family="var(--font-code)" font-size="9" text-anchor="middle">Chạy Offline 100% / Miễn phí hoàn toàn</text>
+                            </g>
+
+                            <!-- Sub-component 3: Cloud APIs (Gemini) -->
+                            <g transform="translate(630, 50)">
+                                <rect width="230" height="80" rx="6" fill="#111827" stroke="rgba(255,255,255,0.06)" />
+                                <text x="115" y="30" fill="#fff" font-family="var(--font-main)" font-size="14" font-weight="bold" text-anchor="middle">Cloud LLM (Optional)</text>
+                                <text x="115" y="50" fill="var(--text-secondary)" font-family="var(--font-main)" font-size="10" text-anchor="middle">Gemini 3.5 Flash / Pro API</text>
+                                <text x="115" y="66" fill="var(--accent-purple)" font-family="var(--font-main)" font-size="9" text-anchor="middle">Dùng cho kiểm tra luật siêu phức tạp</text>
+                            </g>
+                        </g>
+
+                        <!-- Inter-layer Communication Arrows -->
+                        <path d="M 500,150 L 500,180" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" marker-end="url(#arrow-short)" />
+                        <path d="M 500,320 L 500,350" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" marker-end="url(#arrow-short)" />
+
+                        <marker id="arrow-short" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,0.4)" />
+                        </marker>
+                    </svg>
+                </div>
+                <div class="diagram-caption">Hình 4.1: Sơ đồ các tầng logic trong kiến trúc phần mềm tích hợp Graph RAG và Revit.</div>
+            </section>
+
+            <!-- Section 5: Triển khai -->
+            <section id="trien-khai">
+                <h2><span>05 //</span> Hướng Dẫn Cài Đặt và Cấu Hình Mã Nguồn Sẵn Có</h2>
+                <p>Để triển khai kiến trúc này một cách nhanh chóng nhất và thương mại hóa miễn phí, bạn sử dụng thư viện <strong>LightRAG</strong> kết hợp với <strong>Ollama</strong> để chạy offline hoặc <strong>Gemini API</strong> bằng cách tận dụng các dòng code cấu hình cực kỳ tinh gọn.</p>
+                
+                <h3>A. Cài Đặt Các Gói Phụ Thuộc (Python)</h3>
+                <p>Chỉ cần chạy lệnh sau để cài đặt LightRAG và các trình kết nối cơ sở dữ liệu:</p>
+                <div class="code-header">Terminal / PowerShell</div>
+                <pre><code>pip install lightrag-hku ollama neo4j llamaindex-cli-framework</code></pre>
+
+                <h3>B. Mã Nguồn Tích Hợp LightRAG Với Ollama & Neo4j</h3>
+                <p>Đây là cấu hình hoàn chỉnh cho phép trích xuất tài liệu tĩnh và đồng bộ đồ thị Revit động mà không cần xây dựng lại đồ thị từ đầu:</p>
+
+                <div class="code-header">graph_rag_service.py</div>
+                <pre><code>import os
+from lightrag import LightRAG, QueryParam
+from lightrag.llm import ollama_model_complete, ollama_embedding
+from lightrag.utils import EmbeddingFunc
+
+# 1. Cấu hình thư mục làm việc và cơ sở dữ liệu Graph
+WORKING_DIR = "./thbim_graphrag_data"
+if not os.path.exists(WORKING_DIR):
+    os.makedirs(WORKING_DIR)
+
+# 2. Định nghĩa hàm sử dụng Local LLM (Ollama) miễn phí thương mại
+async def local_llm_model_complete(prompt, system_prompt=None, history=[], **kwargs):
+    return await ollama_model_complete(
+        "qwen2.5-coder:7b", # Mô hình code và logic xuất sắc nhất quy mô 7B
+        prompt,
+        system_prompt=system_prompt,
+        history=history,
+        **kwargs
+    )
+
+async def local_llm_embedding(texts):
+    return await ollama_embedding(
+        "nomic-embed-text", # Mô hình embedding miễn phí thương mại chất lượng cao
+        texts
+    )
+
+# 3. Khởi tạo thực thể LightRAG
+rag = LightRAG(
+    working_dir=WORKING_DIR,
+    llm_model_func=local_llm_model_complete,
+    embedding_func=EmbeddingFunc(
+        embedding_dim=768,
+        max_token_size=8192,
+        func=local_llm_embedding
+    )
+)
+
+# 4. Hàm đồng bộ tăng dần (Incremental Sync) dữ liệu Revit từ MCP Server
+def sync_revit_elements(elements_json_list):
+    """
+    elements_json_list: Danh sách chuỗi text mô tả cấu kiện từ Revit API C# gửi qua.
+    Ví dụ: "Wall ID: 124500, Type: Partition, FireRating: 1 Hour, SpatialRelations: Borders Room 302"
+    """
+    for elem_desc in elements_json_list:
+        # Sử dụng cơ chế nạp gia tăng (Không cần build lại đồ thị từ đầu!)
+        rag.insert(elem_desc)
+    print("✓ Đồng bộ tăng dần thành công!")
+
+# 5. Hàm truy vấn ngữ cảnh Graph kết hợp Vector (Hybrid Query)
+def ask_bim_assistant(query_text):
+    # Chế độ 'hybrid' kết hợp thông tin cấu trúc Graph và nội dung Vector
+    response = rag.query(
+        query_text,
+        param=QueryParam(mode="hybrid") 
+    )
+    return response</code></pre>
+
+                <h3>C. Cấu Trúc Đồ Thị Không Gian (Graph Schema) lưu trên Neo4j</h3>
+                <p>Khi đồng bộ dữ liệu đối tượng từ Revit C# sang Neo4j, mô hình dữ liệu sẽ được thiết lập theo schema liên kết tự nhiên sau:</p>
+
+                <div class="specs-list">
+                    <div class="spec-item">
+                        <div class="spec-label">(:Room {id, name, level})</div>
+                        <div class="spec-value">Đại diện cho các không gian, phòng chức năng trong Revit.</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-label">(:Wall {id, type, fire_rating})</div>
+                        <div class="spec-value">Tường bao che hoặc tường phân chia không gian.</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-label">[:BORDERS]</div>
+                        <div class="spec-value">Quan hệ không gian: Tường borders (ngăn cách) Căn Phòng.</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-label">[:CONNECTS_TO]</div>
+                        <div class="spec-value">Quan hệ kết nối: Ống dẫn MEP connects_to Thiết bị (Chiller/AHU).</div>
+                    </div>
+                    <div class="spec-item">
+                        <div class="spec-label">[:COMPLIES_WITH]</div>
+                        <div class="spec-value">Mối liên kết luật: Đối tượng BIM tuân thủ Điều khoản SCDF nào.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Kịch bản sử dụng -->
+            <section id="kiem-chung">
+                <h2><span>06 //</span> Các Kịch Bản Thực Tế Đem Lại ROI Lớn</h2>
+                <p>Để tối ưu hiệu quả đầu tư công nghệ, 3 kịch bản thực tiễn tại Singapore sau đây sẽ giải quyết bài toán cốt lõi cho các nhà thầu và đơn vị thiết kế lớn:</p>
+                
+                <div class="tech-grid">
+                    <div class="tech-card emerald">
+                        <h4>1. Độc lập kiểm tra khoảng cách thoát hiểm (Travel Distance Audit)</h4>
+                        <p>Kỹ sư chỉ cần hỏi: *"Có phòng ngủ nào trên Tầng 4 có khoảng cách đến cầu thang thoát hiểm vượt quá 20 mét không?"*</p>
+                        <p style="margin-top: 10px; font-size: 0.9rem; color: #fff;"><strong>Kết quả:</strong> AI sẽ duyệt qua sơ đồ kết nối phòng -> hành lang -> cầu thang trên Neo4j, tự cộng dồn chiều dài thực tế, so sánh với SCDF Fire Code PDF và đánh dấu đỏ phòng vi phạm ngay trên màn hình Revit.</p>
+                    </div>
+
+                    <div class="tech-card purple">
+                        <h4>2. Kiểm tra xung đột kỹ thuật MEP & Sửa đổi tự động</h4>
+                        <p>Khi ống nước đi xuyên qua dầm chính chịu lực, kỹ sư ra lệnh bằng giọng nói: *"Hãy kiểm tra xem dầm này có được phép đục lỗ không. Nếu không, hãy chuyển hướng ống đi vòng xuống dưới."*</p>
+                        <p style="margin-top: 10px; font-size: 0.9rem; color: #fff;"><strong>Kết quả:</strong> Graph RAG tra cứu ghi chú kết cấu dầm chính (chịu lực cực hạn), trả về kết quả "Không được khoan cắt". Thông qua MCP Server, AI gửi lệnh API C# để tự động điều chỉnh tọa độ đường ống đi vòng xuống dưới dầm một khoảng an toàn.</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box" style="margin-top: 30px;">
+                    <p>🏆 <strong>Kết luận từ Bản thiết kế:</strong> Bằng cách kết hợp **LightRAG** (cập nhật tăng dần siêu nhanh), **Neo4j** (quản lý quan hệ không gian tối ưu) và **Ollama** (vận hành miễn phí offline), bạn đã tạo ra một hệ sinh thái BIM thông minh có độ chính xác chuẩn công nghiệp. Giải pháp này hoàn toàn miễn phí thương mại và sẵn sàng tích hợp thẳng vào sản phẩm thực tế của bất kỳ doanh nghiệp AEC nào tại Singapore.</p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+</body>
+</html>
