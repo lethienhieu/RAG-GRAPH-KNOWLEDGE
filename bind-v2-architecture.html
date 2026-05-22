@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="B.I.N.D V2 — Kiến trúc thống nhất tích hợp Graph RAG, Neo4j, LightRAG, Multimodal VLM và Local LLM cho hệ thống PKM BIM local-first trên Windows." />
+  <title>B.I.N.D V2 — Unified Graph RAG Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design Tokens ── */
+    :root {
+      --bg:             #080c14;
+      --bg2:            #0d1220;
+      --card:           rgba(15, 22, 40, 0.85);
+      --card-border:    rgba(255,255,255,0.07);
+      --card-hover:     rgba(255,255,255,0.11);
+
+      --indigo:         #6366f1;
+      --indigo-glow:    rgba(99,102,241,0.18);
+      --cyan:           #06b6d4;
+      --cyan-glow:      rgba(6,182,212,0.18);
+      --emerald:        #10b981;
+      --emerald-glow:   rgba(16,185,129,0.18);
+      --purple:         #a855f7;
+      --purple-glow:    rgba(168,85,247,0.18);
+      --amber:          #f59e0b;
+      --amber-glow:     rgba(245,158,11,0.18);
+      --rose:           #f43f5e;
+      --rose-glow:      rgba(244,63,94,0.18);
+
+      --txt:            #f1f5f9;
+      --txt2:           #94a3b8;
+      --txt3:           #64748b;
+
+      --font:           'Outfit', sans-serif;
+      --mono:           'JetBrains Mono', monospace;
+
+      --radius-lg:      20px;
+      --radius-md:      12px;
+      --radius-sm:      8px;
+
+      --shadow:         0 20px 60px rgba(0,0,0,0.5);
+      --shadow-sm:      0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--txt);
+      font-family: var(--font);
+      line-height: 1.65;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse at 15% 10%,  rgba(99,102,241,0.07) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 85%,  rgba(6,182,212,0.07)  0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%,  rgba(168,85,247,0.04) 0%, transparent 60%);
+      background-attachment: fixed;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 7px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--indigo); }
+
+    /* ══════════════════════════════════════
+       LAYOUT
+    ══════════════════════════════════════ */
+    .shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 32px 20px;
+      border-right: 1px solid var(--card-border);
+      background: rgba(8,12,20,0.95);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-logo .logo-mark {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--indigo), var(--cyan));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px var(--indigo-glow);
+    }
+    .sidebar-logo .logo-text { font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
+    .sidebar-logo .logo-text small { display: block; font-size: 0.72rem; color: var(--txt3); font-weight: 400; }
+
+    .nav-group { display: flex; flex-direction: column; gap: 4px; }
+    .nav-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--txt3);
+      padding: 0 10px; margin-bottom: 6px;
+    }
+    .nav-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: var(--radius-sm);
+      color: var(--txt2); text-decoration: none;
+      font-size: 0.875rem; font-weight: 500;
+      transition: all 0.2s ease;
+      border-left: 2px solid transparent;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: var(--cyan); background: rgba(6,182,212,0.06);
+      border-left-color: var(--cyan); padding-left: 16px;
+    }
+    .nav-link .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0; opacity: 0.6;
+    }
+
+    .sidebar-badge {
+      margin-top: auto;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, var(--indigo-glow), var(--cyan-glow));
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-md);
+      font-size: 0.78rem; color: var(--txt2); line-height: 1.5;
+    }
+    .sidebar-badge strong { color: var(--txt); display: block; margin-bottom: 4px; }
+
+    /* ── Main Content ── */
+    .main { padding: 0 48px 80px 48px; max-width: 1140px; }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 64px 0 56px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 56px;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--indigo-glow), var(--cyan-glow));
+      border: 1px solid rgba(99,102,241,0.25);
+      padding: 6px 16px; border-radius: 30px;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #c7d2fe;
+      margin-bottom: 24px;
+      animation: pulse-glow 3s ease infinite alternate;
+    }
+    @keyframes pulse-glow {
+      from { box-shadow: 0 0 8px var(--indigo-glow); }
+      to   { box-shadow: 0 0 22px var(--indigo-glow); }
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 45%, var(--cyan) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+    .hero-sub {
+      font-size: 1.15rem; color: var(--txt2); max-width: 760px;
+      font-weight: 300; line-height: 1.75; margin-bottom: 32px;
+    }
+    .hero-meta {
+      display: flex; flex-wrap: wrap; gap: 12px 24px;
+      font-size: 0.82rem; color: var(--txt3);
+    }
+    .hero-meta span { display: flex; align-items: center; gap: 6px; }
+    .hero-meta strong { color: var(--txt2); }
+    .pill {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .pill-ok     { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid rgba(16,185,129,0.25); }
+    .pill-new    { background: var(--cyan-glow); color: var(--cyan);         border: 1px solid rgba(6,182,212,0.25); }
+    .pill-hot    { background: var(--rose-glow);  color: var(--rose);         border: 1px solid rgba(244,63,94,0.25); }
+    .pill-info   { background: var(--indigo-glow);color: #a5b4fc;             border: 1px solid rgba(99,102,241,0.25); }
+    .pill-amber  { background: var(--amber-glow); color: var(--amber);        border: 1px solid rgba(245,158,11,0.25); }
+
+    /* ── Section ── */
+    section {
+      margin-bottom: 64px;
+      scroll-margin-top: 32px;
+    }
+    .section-head {
+      display: flex; align-items: baseline; gap: 14px;
+      margin-bottom: 20px;
+    }
+    .section-num {
+      font-family: var(--mono); font-size: 0.8rem; font-weight: 600;
+      color: var(--cyan); opacity: 0.7;
+    }
+    .section-head h2 {
+      font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em;
+    }
+    .section-lede {
+      color: var(--txt2); font-size: 1rem; max-width: 800px;
+      margin-bottom: 32px; font-weight: 300; line-height: 1.8;
+    }
+
+    /* ── Cards Grid ── */
+    .grid { display: grid; gap: 20px; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, transparent, transparent);
+      transition: background 0.3s ease;
+    }
+    .card:hover { border-color: var(--card-hover); transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+
+    .card.c-indigo::before { background: linear-gradient(90deg, var(--indigo), transparent); }
+    .card.c-cyan::before   { background: linear-gradient(90deg, var(--cyan),   transparent); }
+    .card.c-emerald::before{ background: linear-gradient(90deg, var(--emerald),transparent); }
+    .card.c-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+    .card.c-amber::before  { background: linear-gradient(90deg, var(--amber),  transparent); }
+    .card.c-rose::before   { background: linear-gradient(90deg, var(--rose),   transparent); }
+
+    .card-meta { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+    .card-meta.indigo { color: var(--indigo); }
+    .card-meta.cyan   { color: var(--cyan); }
+    .card-meta.emerald{ color: var(--emerald); }
+    .card-meta.purple { color: var(--purple); }
+    .card-meta.amber  { color: var(--amber); }
+    .card-meta.rose   { color: var(--rose); }
+
+    .card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+    .card p  { font-size: 0.9rem; color: var(--txt2); line-height: 1.7; }
+    .card code { font-family: var(--mono); font-size: 0.78rem; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; }
+
+    /* ── Highlight / Warning boxes ── */
+    .hbox {
+      border-radius: var(--radius-md); padding: 20px 24px; margin: 20px 0;
+      font-size: 0.9rem; line-height: 1.7;
+    }
+    .hbox-info    { background: var(--indigo-glow); border: 1px solid rgba(99,102,241,0.2); color: #c7d2fe; }
+    .hbox-success { background: var(--emerald-glow); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+    .hbox-warn    { background: var(--amber-glow); border: 1px solid rgba(245,158,11,0.2); color: #fcd34d; }
+    .hbox-danger  { background: var(--rose-glow); border: 1px solid rgba(244,63,94,0.2); color: #fda4af; }
+    .hbox strong  { color: #fff; }
+
+    /* ── Diagram wrapper ── */
+    .diagram-wrap {
+      background: #060a12;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin: 28px 0;
+      overflow-x: auto;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+    }
+    .diagram-wrap svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+    .diagram-cap {
+      text-align: center; font-size: 0.82rem; color: var(--txt3);
+      margin-top: 16px; font-style: italic;
+    }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--card-border); margin: 24px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    thead th {
+      background: rgba(255,255,255,0.04); color: var(--txt);
+      font-weight: 600; padding: 14px 18px;
+      border-bottom: 1px solid var(--card-border);
+      text-align: left; white-space: nowrap;
+    }
+    tbody td { padding: 13px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--txt2); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,0.02); color: var(--txt); }
+    td code { font-family: var(--mono); font-size: 0.78rem; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; }
+    td .num { text-align: right; font-family: var(--mono); }
+
+    /* ── Tabs ── */
+    .tabs { border: 1px solid var(--card-border); border-radius: var(--radius-lg); overflow: hidden; margin: 24px 0; }
+    .tab-nav { display: flex; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--card-border); }
+    .tab-btn {
+      flex: 1; padding: 14px 18px; background: none; border: none;
+      color: var(--txt3); font-family: var(--font); font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; transition: all 0.25s ease; text-align: center;
+    }
+    .tab-btn:hover { color: var(--txt); background: rgba(255,255,255,0.02); }
+    .tab-btn.active { color: var(--cyan); background: rgba(6,182,212,0.06); box-shadow: inset 0 -2px 0 var(--cyan); }
+    .tab-pane { padding: 28px; display: none; }
+    .tab-pane.active { display: block; animation: fade-up 0.35s ease; }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Code block ── */
+    .code-wrap {
+      background: #060913; border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md); overflow: hidden; margin: 16px 0;
+    }
+    .code-header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255,255,255,0.03); padding: 10px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-family: var(--mono); font-size: 0.76rem; color: var(--txt3);
+    }
+    pre { padding: 20px; overflow-x: auto; }
+    pre code { font-family: var(--mono); font-size: 0.82rem; color: #a5b4fc; background: none; padding: 0; }
+
+    /* ── Compare Grid ── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .compare-header {
+      background: rgba(255,255,255,0.04);
+      padding: 14px 20px; font-weight: 700; font-size: 0.875rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .compare-header.h-old   { color: var(--txt3); }
+    .compare-header.h-new   { color: var(--cyan);    background: rgba(6,182,212,0.05); }
+    .compare-header.h-eval  { color: var(--emerald); background: rgba(16,185,129,0.05); }
+    .compare-cell {
+      padding: 16px 20px; font-size: 0.875rem; color: var(--txt2);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      line-height: 1.6;
+    }
+    .compare-cell:last-child, .compare-header:last-child { border-bottom: none; }
+    .compare-cell.h-new   { background: rgba(6,182,212,0.02); }
+    .compare-cell.h-eval  { background: rgba(16,185,129,0.02); }
+
+    /* ── Spec list ── */
+    .spec-list { margin: 16px 0; }
+    .spec-row {
+      display: grid; grid-template-columns: 220px 1fr;
+      gap: 16px; padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.88rem;
+    }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-key { font-weight: 600; color: var(--txt); }
+    .spec-val { color: var(--txt2); }
+
+    /* ── Timeline / Roadmap ── */
+    .roadmap { display: flex; flex-direction: column; gap: 0; position: relative; margin: 24px 0; }
+    .roadmap::before {
+      content: ''; position: absolute; left: 20px; top: 24px; bottom: 24px;
+      width: 2px; background: linear-gradient(to bottom, var(--indigo), var(--cyan), var(--emerald));
+    }
+    .rm-item {
+      display: flex; gap: 20px; padding: 20px 0;
+    }
+    .rm-dot {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-weight: 800; font-size: 0.85rem;
+      border: 2px solid;
+      background: var(--bg); z-index: 1; position: relative;
+    }
+    .rm-dot.d1 { color: var(--rose);    border-color: var(--rose); }
+    .rm-dot.d2 { color: var(--amber);   border-color: var(--amber); }
+    .rm-dot.d3 { color: var(--cyan);    border-color: var(--cyan); }
+    .rm-dot.d4 { color: var(--emerald); border-color: var(--emerald); }
+    .rm-body { padding-top: 6px; flex: 1; }
+    .rm-body h4 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .rm-body p  { font-size: 0.875rem; color: var(--txt2); }
+    .rm-body ul { font-size: 0.875rem; color: var(--txt2); padding-left: 18px; margin-top: 8px; }
+    .rm-body li { margin-bottom: 4px; }
+
+    /* ── Flow boxes for new architecture ── */
+    .flow-row {
+      display: flex; align-items: center; gap: 0; margin: 20px 0; flex-wrap: wrap;
+    }
+    .flow-box {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: var(--radius-md); padding: 14px 18px;
+      font-size: 0.82rem; text-align: center; min-width: 120px; flex: 1;
+    }
+    .flow-box .fb-label { font-weight: 700; color: var(--txt); margin-bottom: 4px; }
+    .flow-box .fb-sub   { color: var(--txt3); font-size: 0.75rem; }
+    .flow-arrow { padding: 0 10px; color: var(--txt3); font-size: 1.2rem; flex-shrink: 0; }
+
+    /* ── Status chips in top bar ── */
+    .status-row {
+      display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0;
+    }
+    .status-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 30px;
+      font-size: 0.78rem; font-weight: 600;
+    }
+    .status-chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .sc-shipped  { background: rgba(16,185,129,0.1); color: var(--emerald); border: 1px solid rgba(16,185,129,0.2); }
+    .sc-shipped  .dot { background: var(--emerald); box-shadow: 0 0 6px var(--emerald); }
+    .sc-new      { background: var(--cyan-glow); color: var(--cyan); border: 1px solid rgba(6,182,212,0.2); }
+    .sc-new      .dot { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+    .sc-planned  { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+    .sc-planned  .dot { background: var(--amber); }
+    .sc-critical { background: var(--rose-glow); color: var(--rose); border: 1px solid rgba(244,63,94,0.2); }
+    .sc-critical .dot { background: var(--rose); box-shadow: 0 0 6px var(--rose); }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--card-border); flex-direction: row; flex-wrap: wrap; gap: 20px; }
+      .sidebar-badge { display: none; }
+      .main { padding: 0 24px 60px; }
+      .grid-3 { grid-template-columns: repeat(2, 1fr); }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; }
+      .spec-row { grid-template-columns: 1fr; }
+      .tab-btn { font-size: 0.75rem; padding: 10px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <nav class="sidebar" aria-label="Page navigation">
+    <div class="sidebar-logo">
+      <div class="logo-mark">B</div>
+      <div class="logo-text">
+        B.I.N.D V2
+        <small>Graph RAG + BIM · 2026</small>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Kiến Trúc Cốt Lõi</div>
+      <a class="nav-link active" href="#overview"><span class="dot"></span> Tổng Quan V2</a>
+      <a class="nav-link" href="#layers"><span class="dot"></span> Phân Lớp Hệ Thống</a>
+      <a class="nav-link" href="#dual-stream"><span class="dot"></span> Hai Luồng BIM Data</a>
+      <a class="nav-link" href="#diagram"><span class="dot"></span> Sơ Đồ Tổng Thể</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">AI & Dữ Liệu</div>
+      <a class="nav-link" href="#models"><span class="dot"></span> Mô Hình AI</a>
+      <a class="nav-link" href="#ingestion"><span class="dot"></span> Ingestion Pipeline</a>
+      <a class="nav-link" href="#vlm-ocr"><span class="dot"></span> VLM OCR Strategy</a>
+      <a class="nav-link" href="#graph-rag"><span class="dot"></span> Graph RAG Engine</a>
+      <a class="nav-link" href="#rag-flow"><span class="dot"></span> RAG Search Flow</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Quyết Định & Lộ Trình</div>
+      <a class="nav-link" href="#tech-decisions"><span class="dot"></span> So Sánh & Quyết Định</a>
+      <a class="nav-link" href="#algorithms"><span class="dot"></span> Thông Số Thuật Toán</a>
+      <a class="nav-link" href="#roadmap"><span class="dot"></span> Lộ Trình Nâng Cấp</a>
+      <a class="nav-link" href="#risks"><span class="dot"></span> Quản Trị Rủi Ro</a>
+    </div>
+
+    <div class="sidebar-badge">
+      <strong>D-09 SHIPPED ✓</strong>
+      WebView2 + Cloud AI migration hoàn tất. Tài liệu này định nghĩa giai đoạn V2 — Graph-Native RAG.
+    </div>
+  </nav>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="main">
+
+    <!-- ── HERO ── -->
+    <div class="hero" id="overview">
+      <div class="hero-eyebrow">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 3v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Unified Architecture V2 · Graph RAG + BIM · 2026-05-22
+      </div>
+      <h1>B.I.N.D — Kiến Trúc<br/>Graph RAG Thế Hệ Mới</h1>
+      <p class="hero-sub">
+        Hợp nhất kiến trúc hệ thống PKM local-first post-migration (D-09) với các chiến lược đồ thị tri thức
+        thế hệ mới: <strong>LightRAG incremental graph</strong>, hai luồng dữ liệu BIM tách biệt (Static + Dynamic),
+        <strong>Multimodal VLM OCR</strong> cho tài liệu phức tạp, và lớp Local LLM (Ollama) giảm chi phí vận hành
+        xuống gần bằng 0 — trong khi giữ nguyên toàn bộ tính năng desktop offline-first đã được triển khai.
+      </p>
+
+      <div class="status-row">
+        <div class="status-chip sc-shipped"><span class="dot"></span>D-09 Shipped · WebView2 + Cloud LLM</div>
+        <div class="status-chip sc-shipped"><span class="dot"></span>Phase 5 · Revit MCP 90+ Tools</div>
+        <div class="status-chip sc-new"><span class="dot"></span>V2 · LightRAG Graph Engine</div>
+        <div class="status-chip sc-new"><span class="dot"></span>V2 · Multimodal VLM OCR</div>
+        <div class="status-chip sc-planned"><span class="dot"></span>V2 · Sigma.js WebGL Graph</div>
+        <div class="status-chip sc-planned"><span class="dot"></span>V2 · Ollama Local LLM Tier</div>
+      </div>
+
+      <div class="hero-meta">
+        <span><strong>Stack:</strong> .NET 8 · React 19 · WebView2 · SQLite + sqlite-vec</span>
+        <span><strong>Graph:</strong> LightRAG · Neo4j (planned) · GraphConnections</span>
+        <span><strong>AI Local:</strong> BGE-M3 · BGE-Reranker · Florence-2 ONNX · Tesseract</span>
+        <span><strong>AI Cloud:</strong> Gemini 2.5 Pro/Flash · Claude Sonnet · GPT-4o</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 1 · LAYERED SYSTEM ARCHITECTURE
+    ══════════════════════════════════════════ -->
+    <section id="layers">
+      <div class="section-head">
+        <span class="section-num">01 //</span>
+        <h2>Kiến Trúc Phân Lớp Hệ Thống</h2>
+      </div>
+      <p class="section-lede">
+        B.I.N.D V2 vẫn giữ mô hình 3 lớp tách biệt trong một tiến trình duy nhất trên Windows Desktop,
+        nhưng bổ sung thêm <strong>Graph Engine Layer</strong> và <strong>Local LLM Tier</strong> để hoàn thiện
+        kiến trúc RAG đồ thị thế hệ mới.
+      </p>
+
+      <div class="grid grid-3">
+        <div class="card c-indigo">
+          <div class="card-meta indigo">Host Shell · WPF</div>
+          <h4>BIND.App</h4>
+          <p>Window host mỏng C# WPF — WebView2 toàn màn hình, không XAML UI. Quản lý vòng đời, DI (<code>Microsoft.Extensions.Hosting</code>), Serilog, <strong>HWND Subclassing</strong> cho frameless resize.</p>
+        </div>
+        <div class="card c-cyan">
+          <div class="card-meta cyan">UI Layer · SPA</div>
+          <h4>frontend/ React 19 + Vite</h4>
+          <p>SPA offline phục vụ qua virtual host <code>bind.app.local</code>. Graph view dùng D3-force Canvas → <strong>nâng cấp Sigma.js v3 WebGL</strong> khi node &gt;5,000. Markdown renderer GFM.</p>
+        </div>
+        <div class="card c-purple">
+          <div class="card-meta purple">Bridge IPC</div>
+          <h4>BIND.Bridge</h4>
+          <p>JSON router hai chiều qua <code>postMessage</code>. 9 handler prefix: <code>chat · graph · agent · mcp · models · config · ingest · entities · vlm</code>. <strong>Token Coalescing 30-50ms</strong> chống lag 60fps.</p>
+        </div>
+
+        <div class="card c-cyan">
+          <div class="card-meta cyan">Domain Core</div>
+          <h4>BIND.Core</h4>
+          <p>Models, Interfaces (<code>ILlmProvider</code>, <code>IExtractor</code>, <code>IEmbedder</code>, <code>IGraphEngine</code>). Hoàn toàn độc lập framework, không deps ngoài.</p>
+        </div>
+        <div class="card c-cyan">
+          <div class="card-meta cyan">Data Store</div>
+          <h4>BIND.Data</h4>
+          <p>SQLite + Dapper + <code>sqlite-vec</code> extension. Vector dimension 1024. 7 Repositories. <strong>V2: thêm GraphConnections schema</strong> cho LightRAG node/edge storage.</p>
+        </div>
+        <div class="card c-indigo">
+          <div class="card-meta indigo">Ingestion Pipeline</div>
+          <h4>BIND.Ingestion</h4>
+          <p><code>Channel&lt;T&gt;</code> parallel worker pool. <strong>V2: thêm VLM OCR path</strong> (Gemini Flash) song song với Docling/Pandoc. Florence-2 ONNX, Tesseract 5 OCR.</p>
+        </div>
+
+        <div class="card c-emerald">
+          <div class="card-meta emerald">AI & RAG Engine</div>
+          <h4>BIND.AI</h4>
+          <p>Cloud LLM (<code>ILlmProvider</code>: Gemini/Claude/GPT). BGE-M3 CPU embed. Hybrid Search BM25 + Vector. BGE-Reranker ONNX. <strong>V2: LightRAG Graph Engine + Ollama local tier.</strong></p>
+        </div>
+        <div class="card c-emerald">
+          <div class="card-meta emerald">IPC & AddIn</div>
+          <h4>BIND.IPC + Revit.AddIn</h4>
+          <p>Named Pipe <code>\\.\pipe\bind-revit</code>. <code>ExternalEvent</code> pattern cho Revit main thread safety. <strong>V2: dynamic data stream</strong> — sync incremental graph khi model thay đổi.</p>
+        </div>
+        <div class="card c-emerald">
+          <div class="card-meta emerald">MCP Revit Agent</div>
+          <h4>THBIM-MCP-Server (Node)</h4>
+          <p>Subprocess Node.js, StdIO MCP. 90+ BIM tools. HTTP 5050 bridge. <strong>V2: thêm Graph Query tool</strong> — LLM truy vấn đồ thị không gian Revit qua Cypher-like API.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 2 · DUAL STREAM BIM DATA
+    ══════════════════════════════════════════ -->
+    <section id="dual-stream">
+      <div class="section-head">
+        <span class="section-num">02 //</span>
+        <h2>Hai Luồng Dữ Liệu BIM — Ý Tưởng Cốt Lõi V2</h2>
+      </div>
+      <p class="section-lede">
+        Đây là cải tiến kiến trúc quan trọng nhất của V2. Thay vì xử lý tất cả như một pipeline duy nhất,
+        hệ thống tách biệt hoàn toàn hai nguồn dữ liệu BIM có đặc tính hoàn toàn khác nhau:
+      </p>
+
+      <div class="grid grid-2">
+        <div class="card c-cyan">
+          <div class="card-meta cyan">📄 Static Data Stream</div>
+          <h4>Tài Liệu Quy Chuẩn & Pháp Lý</h4>
+          <p>Quy chuẩn xây dựng TCVN, tiêu chuẩn PCCC, tài liệu kỹ thuật BCA/SCDF dạng PDF. Dữ liệu <strong>ổn định, hiếm thay đổi</strong>.</p>
+          <div style="margin-top:16px">
+            <div class="spec-list">
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr;">
+                <div class="spec-key">Strategy</div>
+                <div class="spec-val">Hierarchical Community Graph — build 1 lần, đọc nhiều</div>
+              </div>
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr;">
+                <div class="spec-key">Parser</div>
+                <div class="spec-val">VLM OCR (Gemini Flash) + IBM Docling fallback</div>
+              </div>
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr;">
+                <div class="spec-key">Graph Engine</div>
+                <div class="spec-val">LightRAG — tiết kiệm token ×1000 vs GraphRAG</div>
+              </div>
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr; border-bottom:none;">
+                <div class="spec-key">Update freq</div>
+                <div class="spec-val">Hàng tuần / khi ban hành quy chuẩn mới</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card c-emerald">
+          <div class="card-meta emerald">🏗️ Dynamic Data Stream</div>
+          <h4>Mô Hình Revit Đang Thiết Kế</h4>
+          <p>Các cấu kiện BIM (vách, dầm, cột, ống MEP), quan hệ không gian, mối liên kết topo đang thay đổi liên tục khi kỹ sư thiết kế.</p>
+          <div style="margin-top:16px">
+            <div class="spec-list">
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr;">
+                <div class="spec-key">Strategy</div>
+                <div class="spec-val">Incremental Graph Updates — chỉ update node thay đổi</div>
+              </div>
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr;">
+                <div class="spec-key">Source</div>
+                <div class="spec-val">Named Pipe IPC từ Revit ExternalEvent trigger</div>
+              </div>
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr;">
+                <div class="spec-key">Graph Engine</div>
+                <div class="spec-val">LightRAG incremental → (future) Neo4j Spatial</div>
+              </div>
+              <div class="spec-row" style="padding:8px 0; grid-template-columns: 140px 1fr; border-bottom:none;">
+                <div class="spec-key">Update freq</div>
+                <div class="spec-val">Mỗi khi kỹ sư Save / Sync model (event-driven)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hbox hbox-info">
+        <strong>💡 Tại sao cần tách biệt hai luồng?</strong>
+        Quy chuẩn xây dựng không thay đổi hàng ngày — chỉ cần index 1 lần và dùng lâu dài với Hierarchical Community strategy.
+        Ngược lại, Revit model thay đổi sau mỗi lần Save — cần Incremental strategy để không rebuild toàn bộ graph mỗi lần.
+        Trộn lẫn hai luồng này (như V1) là nguyên nhân gốc rễ của hiện tượng <strong>node liên kết biến mất</strong> trên đồ thị.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 3 · OVERALL DIAGRAM
+    ══════════════════════════════════════════ -->
+    <section id="diagram">
+      <div class="section-head">
+        <span class="section-num">03 //</span>
+        <h2>Sơ Đồ Kiến Trúc Tổng Thể V2</h2>
+      </div>
+      <p class="section-lede">Phân phối luồng dữ liệu và lệnh toàn hệ thống sau khi tích hợp V2. Màu cam = in-process C#, xanh dương = Bridge JSON IPC, xanh lá = external IPC / HTTPS Cloud.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1100 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="B.I.N.D V2 Architecture Diagram">
+          <defs>
+            <marker id="arr"      viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+            <marker id="arr-org"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/></marker>
+            <marker id="arr-blu"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6366f1"/></marker>
+            <marker id="arr-grn"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#10b981"/></marker>
+            <marker id="arr-cyn"  viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#06b6d4"/></marker>
+          </defs>
+
+          <style>
+            .d-lbl  { font: 700 11px 'Outfit',sans-serif; fill:#94a3b8; letter-spacing:.06em; text-transform:uppercase; }
+            .d-box  { font: 700 12px 'Outfit',sans-serif; fill:#f1f5f9; }
+            .d-sub  { font: 400 10px 'Outfit',sans-serif; fill:#64748b; }
+            .d-sub2 { font: 400 9.5px 'Outfit',sans-serif; fill:#94a3b8; }
+            .d-new  { font: 700 9px 'Outfit',sans-serif; fill:#06b6d4; letter-spacing:.04em; }
+            .box-ui   { fill: rgba(99,102,241,0.12); stroke:#4f46e5; stroke-width:1; }
+            .box-net  { fill: rgba(6,182,212,0.10);  stroke:#0e7490; stroke-width:1; }
+            .box-ai   { fill: rgba(16,185,129,0.10); stroke:#047857; stroke-width:1; }
+            .box-data { fill: rgba(245,158,11,0.10); stroke:#b45309; stroke-width:1; }
+            .box-ext  { fill: rgba(168,85,247,0.10); stroke:#7c3aed; stroke-width:1; }
+            .box-new  { fill: rgba(6,182,212,0.06);  stroke:#06b6d4; stroke-width:1.5; stroke-dasharray:5,3; }
+            .edge     { fill:none; stroke:#334155; stroke-width:1.5; }
+            .edge-org { fill:none; stroke:#f59e0b; stroke-width:1.5; }
+            .edge-blu { fill:none; stroke:#6366f1; stroke-width:1.5; }
+            .edge-grn { fill:none; stroke:#10b981; stroke-width:1.5; }
+            .edge-cyn { fill:none; stroke:#06b6d4; stroke-width:1.5; stroke-dasharray:5,3; }
+          </style>
+
+          <!-- ── Layer labels ── -->
+          <text x="18" y="32"  class="d-lbl">USER · WINDOWS DESKTOP</text>
+          <text x="18" y="126" class="d-lbl">UI LAYER · WebView2 Host + React SPA</text>
+          <text x="18" y="248" class="d-lbl">BRIDGE · C# JSON Router (Token Coalescing 30-50ms)</text>
+          <text x="18" y="326" class="d-lbl">BACKEND ENGINE · .NET 8 In-Process</text>
+          <text x="18" y="540" class="d-lbl">AI TIER · Local + Cloud</text>
+          <text x="18" y="624" class="d-lbl">DATA STORAGE · %AppData%/BIND</text>
+          <text x="18" y="698" class="d-lbl">EXTERNAL SERVICES &amp; BIM INTEGRATION</text>
+
+          <!-- WPF Host -->
+          <rect x="440" y="42" width="220" height="52" rx="10" class="box-ui"/>
+          <text x="550" y="63"  class="d-box" text-anchor="middle">WPF Window (Frameless)</text>
+          <text x="550" y="81"  class="d-sub" text-anchor="middle">BIND.App · HWND Subclassing</text>
+
+          <!-- UI Panels -->
+          <rect x="60"  y="136" width="155" height="90" rx="8" class="box-ui"/>
+          <text x="137" y="157" class="d-box" text-anchor="middle">Graph View</text>
+          <text x="137" y="174" class="d-sub" text-anchor="middle">D3 Canvas</text>
+          <text x="137" y="189" class="d-new" text-anchor="middle">→ Sigma.js WebGL</text>
+          <text x="137" y="205" class="d-sub" text-anchor="middle">v2: &gt;5K nodes</text>
+
+          <rect x="232" y="136" width="155" height="90" rx="8" class="box-ui"/>
+          <text x="310" y="157" class="d-box" text-anchor="middle">Library &amp; Drag-Drop</text>
+          <text x="310" y="174" class="d-sub" text-anchor="middle">React 19 GFM</text>
+          <text x="310" y="190" class="d-sub" text-anchor="middle">Offline Document View</text>
+
+          <rect x="404" y="136" width="155" height="90" rx="8" class="box-ui"/>
+          <text x="481" y="157" class="d-box" text-anchor="middle">Chat Panel</text>
+          <text x="481" y="174" class="d-sub" text-anchor="middle">Coalesced Stream</text>
+          <text x="481" y="190" class="d-sub" text-anchor="middle">Citation inline [Ref#N]</text>
+
+          <rect x="576" y="136" width="155" height="90" rx="8" class="box-ui"/>
+          <text x="653" y="157" class="d-box" text-anchor="middle">Revit Agent Panel</text>
+          <text x="653" y="174" class="d-sub" text-anchor="middle">Interactive Loops</text>
+          <text x="653" y="190" class="d-sub" text-anchor="middle">Confirm Tool Cards</text>
+
+          <rect x="748" y="136" width="200" height="90" rx="8" class="box-ui"/>
+          <text x="848" y="157" class="d-box" text-anchor="middle">Topbar / Settings</text>
+          <text x="848" y="174" class="d-sub" text-anchor="middle">API Keys · Model Select</text>
+          <text x="848" y="190" class="d-sub" text-anchor="middle">Token Cap · Cost Estimate</text>
+
+          <!-- Bridge -->
+          <rect x="60" y="256" width="888" height="52" rx="10" class="box-net"/>
+          <text x="504" y="278" class="d-box" text-anchor="middle">BIND.Bridge — 9 Handler Prefixes + Token Coalescing Buffer</text>
+          <text x="504" y="296" class="d-sub" text-anchor="middle">window · chat · graph · agent · mcp · models · config · ingest · entities</text>
+
+          <!-- Backend boxes -->
+          <rect x="60"  y="335" width="190" height="188" rx="10" class="box-net"/>
+          <text x="155" y="356" class="d-box" text-anchor="middle">BIND.Ingestion</text>
+          <text x="155" y="373" class="d-sub" text-anchor="middle">Channel&lt;T&gt; Worker Pool</text>
+          <text x="70"  y="393" class="d-sub2">• Pandoc CLI (DOCX)</text>
+          <text x="70"  y="408" class="d-sub2">• IBM Docling MCP (PDF)</text>
+          <text x="70"  y="423" class="d-sub2">• OpenMcdf (RVT Preview)</text>
+          <text x="70"  y="438" class="d-sub2">• Tesseract OCR vie+eng</text>
+          <text x="70"  y="453" class="d-sub2">• Florence-2 ONNX Caption</text>
+          <text x="70"  y="468" class="d-new">• VLM OCR Path (NEW)</text>
+          <text x="70"  y="485" class="d-sub2">• Embed &amp; Persist Stages</text>
+          <text x="70"  y="505" class="d-sub2">• MD5 Dedup</text>
+
+          <rect x="268" y="335" width="218" height="188" rx="10" class="box-ai"/>
+          <text x="377" y="356" class="d-box" text-anchor="middle">BIND.AI — RAG Engine</text>
+          <text x="377" y="373" class="d-sub" text-anchor="middle">Cloud + Local Hybrid</text>
+          <text x="278" y="393" class="d-sub2">• ILlmProvider (Gemini/Claude/GPT)</text>
+          <text x="278" y="408" class="d-sub2">• BgeEmbedder (BGE-M3 CPU)</text>
+          <text x="278" y="423" class="d-sub2">• Hybrid Search (BM25 + Vector)</text>
+          <text x="278" y="438" class="d-sub2">• BGE-Reranker-v2-m3 ONNX</text>
+          <text x="278" y="453" class="d-new">• LightRAG Graph Engine (NEW)</text>
+          <text x="278" y="468" class="d-new">• Dual Stream Router (NEW)</text>
+          <text x="278" y="483" class="d-sub2">• McpToolGateway (12 tools/call)</text>
+          <text x="278" y="500" class="d-sub2">• AutoTagger (Gemini Flash)</text>
+          <text x="278" y="516" class="d-sub2">• Token Coalescing 30-50ms</text>
+
+          <rect x="502" y="335" width="180" height="100" rx="10" class="box-net"/>
+          <text x="592" y="356" class="d-box" text-anchor="middle">BIND.Data</text>
+          <text x="592" y="374" class="d-sub" text-anchor="middle">SQLite + sqlite-vec</text>
+          <text x="512" y="394" class="d-sub2">• 7 Repos (Entity, Chunks…)</text>
+          <text x="512" y="409" class="d-sub2">• 1024d Vector Index</text>
+          <text x="512" y="424" class="d-new">• GraphNodes / GraphEdges</text>
+
+          <rect x="502" y="448" width="180" height="75" rx="10" class="box-net"/>
+          <text x="592" y="469" class="d-box" text-anchor="middle">BIND.IPC</text>
+          <text x="592" y="486" class="d-sub" text-anchor="middle">Named Pipe Server</text>
+          <text x="592" y="502" class="d-sub" text-anchor="middle">\\.\pipe\bind-revit</text>
+
+          <rect x="702" y="335" width="246" height="188" rx="10" class="box-net"/>
+          <text x="825" y="356" class="d-box" text-anchor="middle">BIND.Core + Config</text>
+          <text x="825" y="374" class="d-sub" text-anchor="middle">Domain Models &amp; Settings</text>
+          <text x="712" y="394" class="d-sub2">• Entity / Chunk / Tag</text>
+          <text x="712" y="409" class="d-sub2">• ILlmProvider / IExtractor</text>
+          <text x="712" y="424" class="d-new">• IGraphEngine (NEW)</text>
+          <text x="712" y="446" class="d-box">Config File</text>
+          <text x="712" y="462" class="d-sub2">%AppData%/BIND/bind_config.json</text>
+          <text x="712" y="477" class="d-sub2">• API Keys (NTFS ACL)</text>
+          <text x="712" y="492" class="d-sub2">• SelectedModel / MCP Servers</text>
+          <text x="712" y="507" class="d-new">• OllamaEndpoint (NEW)</text>
+
+          <!-- AI Tier NEW boxes -->
+          <rect x="60"  y="552" width="200" height="55" rx="8" class="box-new"/>
+          <text x="160" y="574" class="d-box" text-anchor="middle">Ollama Local LLM</text>
+          <text x="160" y="591" class="d-new" text-anchor="middle">Qwen-2.5 / Llama-3 — FREE</text>
+
+          <rect x="280" y="552" width="200" height="55" rx="8" class="box-new"/>
+          <text x="380" y="574" class="d-box" text-anchor="middle">LightRAG Engine</text>
+          <text x="380" y="591" class="d-new" text-anchor="middle">Incremental Graph · MIT</text>
+
+          <rect x="500" y="552" width="200" height="55" rx="8" class="box-ai"/>
+          <text x="600" y="574" class="d-box" text-anchor="middle">BGE-M3 + Reranker</text>
+          <text x="600" y="591" class="d-sub" text-anchor="middle">CPU ONNX · Offline</text>
+
+          <rect x="720" y="552" width="228" height="55" rx="8" class="box-ext"/>
+          <text x="834" y="574" class="d-box" text-anchor="middle">Cloud LLM APIs</text>
+          <text x="834" y="591" class="d-sub" text-anchor="middle">Gemini · Claude · OpenAI</text>
+
+          <!-- Data Storage -->
+          <rect x="60"  y="634" width="240" height="48" rx="8" class="box-data"/>
+          <text x="180" y="653" class="d-box" text-anchor="middle">SQLite + sqlite-vec</text>
+          <text x="180" y="669" class="d-sub" text-anchor="middle">bind.db · Chunks · 1024d Vectors</text>
+
+          <rect x="318" y="634" width="230" height="48" rx="8" class="box-data"/>
+          <text x="433" y="653" class="d-box" text-anchor="middle">File Storage</text>
+          <text x="433" y="669" class="d-sub" text-anchor="middle">{yyyy}/{md5}.ext · Ghost.md · PNGs</text>
+
+          <rect x="566" y="634" width="180" height="48" rx="8" class="box-data"/>
+          <text x="656" y="653" class="d-box" text-anchor="middle">Local Model Assets</text>
+          <text x="656" y="669" class="d-sub" text-anchor="middle">BGE-M3 · Florence · Tesseract</text>
+
+          <rect x="764" y="634" width="184" height="48" rx="8" class="box-data"/>
+          <text x="856" y="653" class="d-box" text-anchor="middle">Tools Cabinet</text>
+          <text x="856" y="669" class="d-sub" text-anchor="middle">pandoc.exe · docling.exe</text>
+
+          <!-- External Services -->
+          <rect x="60"  y="710" width="240" height="38" rx="7" class="box-ext"/>
+          <text x="180" y="732" class="d-box" text-anchor="middle">Revit 2025 + BIND.AddIn</text>
+
+          <rect x="318" y="710" width="280" height="38" rx="7" class="box-ext"/>
+          <text x="458" y="732" class="d-box" text-anchor="middle">THBIM-MCP-Server (Node :5050)</text>
+
+          <!-- ── Edges ── -->
+          <!-- WPF → UI panels (orange = WPF spawns) -->
+          <path d="M550 94 L550 116 L137 116 L137 136" class="edge-org" marker-end="url(#arr-org)"/>
+          <path d="M550 94 L550 116 L310 116 L310 136" class="edge-org" marker-end="url(#arr-org)"/>
+          <path d="M550 94 L550 136"                   class="edge-org" marker-end="url(#arr-org)"/>
+          <path d="M550 94 L550 116 L653 116 L653 136" class="edge-org" marker-end="url(#arr-org)"/>
+          <path d="M550 94 L550 116 L848 116 L848 136" class="edge-org" marker-end="url(#arr-org)"/>
+
+          <!-- UI → Bridge (indigo) -->
+          <path d="M137 226 L137 256" class="edge-blu" marker-end="url(#arr-blu)"/>
+          <path d="M310 226 L310 256" class="edge-blu" marker-end="url(#arr-blu)"/>
+          <path d="M481 226 L481 256" class="edge-blu" marker-end="url(#arr-blu)"/>
+          <path d="M653 226 L653 256" class="edge-blu" marker-end="url(#arr-blu)"/>
+          <path d="M848 226 L848 256" class="edge-blu" marker-end="url(#arr-blu)"/>
+
+          <!-- Bridge → Backend -->
+          <path d="M155 308 L155 335" class="edge" marker-end="url(#arr)"/>
+          <path d="M377 308 L377 335" class="edge" marker-end="url(#arr)"/>
+          <path d="M592 308 L592 335" class="edge" marker-end="url(#arr)"/>
+          <path d="M825 308 L825 335" class="edge" marker-end="url(#arr)"/>
+
+          <!-- Ingestion → AI -->
+          <path d="M250 430 L268 430" class="edge" marker-end="url(#arr)"/>
+
+          <!-- AI → Data -->
+          <path d="M486 420 L502 400" class="edge" marker-end="url(#arr)"/>
+
+          <!-- AI → LightRAG (new, cyan dashed) -->
+          <path d="M377 523 L377 552" class="edge-cyn" marker-end="url(#arr-cyn)"/>
+          <!-- AI → Ollama (new) -->
+          <path d="M155 523 L155 552" class="edge-cyn" marker-end="url(#arr-cyn)"/>
+
+          <!-- Data → Storage -->
+          <path d="M155 523 L155 634" class="edge" marker-end="url(#arr)"/>
+
+          <!-- IPC → Revit -->
+          <path d="M592 523 L592 600 L180 600 L180 710" class="edge-grn" marker-end="url(#arr-grn)" stroke-dasharray="6,3"/>
+          <!-- AI → MCP → Revit -->
+          <path d="M486 480 L502 490 L502 540 L458 540 L458 710" class="edge-grn" marker-end="url(#arr-grn)" stroke-dasharray="6,3"/>
+          <!-- AI → Cloud LLM -->
+          <path d="M486 420 L1060 420 L1060 570 L948 570" class="edge-grn" marker-end="url(#arr-grn)" stroke-dasharray="6,3"/>
+        </svg>
+      </div>
+      <p class="diagram-cap">Hình 1 — Kiến trúc tổng thể B.I.N.D V2. Nét đứt cyan = component mới (V2). Nét đứt xanh lá = kết nối IPC / Cloud.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 4 · AI MODELS
+    ══════════════════════════════════════════ -->
+    <section id="models">
+      <div class="section-head">
+        <span class="section-num">04 //</span>
+        <h2>Phân Loại Mô Hình AI — V2 Model Tier</h2>
+      </div>
+      <p class="section-lede">
+        V2 bổ sung <strong>Tier 0 — Ollama Local LLM</strong> xử lý 80% tác vụ thường ngày hoàn toàn miễn phí,
+        giữ nguyên Tier 1 (Local Offline Models) và Tier 2 (Cloud LLM cho tác vụ phức tạp).
+      </p>
+
+      <div class="hbox hbox-success" style="margin-bottom:24px">
+        <strong>💰 Chiến lược chi phí 3 tầng:</strong>
+        Tier 0 (Ollama free) → Tier 1 (Local models free) → Tier 2 (Cloud API, chỉ khi thực sự cần).
+        Với cấu trúc này, 80-90% tác vụ hàng ngày chạy hoàn toàn miễn phí và offline.
+      </div>
+
+      <h3 style="font-size:1.1rem; color:var(--txt); margin:20px 0 12px; display:flex; gap:10px; align-items:center;">
+        <span style="color:var(--cyan)">Tier 0</span> — Ollama Local LLM <span class="pill pill-new">V2 MỚI</span>
+      </h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th>Size</th><th>Vai trò</th><th>Chi phí</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Qwen-2.5-Coder-7B</strong></td><td>~4.5GB Q4</td><td>Tác vụ code, query BIM thường ngày, ReAct agent loop nhẹ</td><td><span class="pill pill-ok">Free</span></td></tr>
+            <tr><td><strong>Llama-3.2-3B</strong></td><td>~2GB Q4</td><td>AutoTag nhanh, tóm tắt đoạn văn ngắn, keyword extraction</td><td><span class="pill pill-ok">Free</span></td></tr>
+            <tr><td><strong>Qwen2-VL-7B</strong> (optional)</td><td>~5GB Q4</td><td>VLM OCR local — fallback khi không có API key Gemini</td><td><span class="pill pill-ok">Free</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:1.1rem; color:var(--txt); margin:20px 0 12px; display:flex; gap:10px; align-items:center;">
+        <span style="color:var(--emerald)">Tier 1</span> — Local Offline Models (Không đổi)
+      </h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th>File</th><th>Runtime</th><th>Đầu ra</th></tr></thead>
+          <tbody>
+            <tr><td><strong>BGE-M3</strong></td><td><code>bge-m3-Q4_K_M.gguf</code> ~2.1GB</td><td>LLamaSharp CPU multi-thread</td><td>Dense vector 1024d</td></tr>
+            <tr><td><strong>BGE-Reranker-v2-m3</strong></td><td><code>.onnx</code> ~400MB</td><td>ONNX Runtime CPU</td><td>Relevance score [0–1]</td></tr>
+            <tr><td><strong>Florence-2</strong></td><td>4 ONNX files</td><td>ONNX Runtime CPU</td><td>Image captions ≤64 tokens</td></tr>
+            <tr><td><strong>Tesseract 5</strong></td><td><code>vie + eng.traineddata</code></td><td>Native C++ (pool 2 luồng)</td><td>Text + Bounding Box</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size:1.1rem; color:var(--txt); margin:20px 0 12px; display:flex; gap:10px; align-items:center;">
+        <span style="color:var(--purple)">Tier 2</span> — Cloud LLM (Chỉ cho tác vụ phức tạp)
+      </h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nhà cung cấp</th><th>Model</th><th>Context</th><th>Thinking</th><th>Tác vụ</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Google</strong></td><td><code>gemini-2.5-pro</code></td><td>2M tokens</td><td>30,000</td><td>RAG chính, context siêu dài, Revit Agent phức tạp</td></tr>
+            <tr><td><strong>Google</strong></td><td><code>gemini-2.5-flash</code></td><td>1M tokens</td><td>—</td><td>AutoTag, VLM OCR pipeline, tóm tắt tốc độ cao</td></tr>
+            <tr><td><strong>Anthropic</strong></td><td><code>claude-sonnet-4-5</code></td><td>200K</td><td>16,000</td><td>Tool-calling đa tầng, Revit Agent logic cực phức tạp</td></tr>
+            <tr><td><strong>OpenAI</strong></td><td><code>gpt-4o-mini</code></td><td>128K</td><td>—</td><td>Dự phòng, tác vụ giá rẻ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 5 · VLM OCR STRATEGY (NEW)
+    ══════════════════════════════════════════ -->
+    <section id="vlm-ocr">
+      <div class="section-head">
+        <span class="section-num">05 //</span>
+        <h2>Chiến Lược VLM OCR — Nâng Cấp Ingestion Pipeline</h2>
+      </div>
+      <p class="section-lede">
+        V2 bổ sung <strong>VLM OCR Path</strong> song song với Docling/Pandoc hiện tại.
+        Thay vì parse text trực tiếp từ PDF, hệ thống render từng trang thành ảnh cao DPI và gửi cho VLM
+        — giải quyết triệt để vấn đề bảng biểu bị vỡ và hình ảnh không có mô tả.
+      </p>
+
+      <div class="tabs">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'vlm-tab1')">🏆 VLM OCR (Gemini Flash)</button>
+          <button class="tab-btn" onclick="switchTab(this,'vlm-tab2')">🔧 IBM Docling (Layout-Aware)</button>
+          <button class="tab-btn" onclick="switchTab(this,'vlm-tab3')">⚡ Pandoc CLI (DOCX)</button>
+        </div>
+        <div id="vlm-tab1" class="tab-pane active">
+          <h4 style="color:var(--cyan); margin-bottom:12px">Multimodal VLM OCR — Giải Pháp Tốt Nhất Cho PDF Phức Tạp</h4>
+          <p style="color:var(--txt2); font-size:0.9rem; margin-bottom:16px">Render PDF page → PNG 300 DPI → gửi Gemini 2.5 Flash → nhận Markdown hoàn chỉnh với bảng biểu, caption hình ảnh, và meta-tag trang số.</p>
+          <div class="grid grid-2" style="gap:16px; margin-bottom:16px">
+            <div style="padding:16px; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.15); border-radius:10px; font-size:0.875rem;">
+              <div style="color:var(--emerald); font-weight:700; margin-bottom:8px">✅ Ưu điểm</div>
+              <ul style="color:var(--txt2); padding-left:16px; line-height:1.8">
+                <li>Độ chính xác bảng biểu <strong style="color:#fff">95-98%</strong></li>
+                <li>Tự động mô tả hình ảnh, biểu đồ kỹ thuật</li>
+                <li>Loại bỏ Header/Footer qua System Prompt</li>
+                <li>Sinh <code>[Page X]</code> meta-tag cho citation</li>
+                <li>Xử lý được tài liệu scan + layout 2-3 cột</li>
+              </ul>
+            </div>
+            <div style="padding:16px; background:rgba(244,63,94,0.05); border:1px solid rgba(244,63,94,0.15); border-radius:10px; font-size:0.875rem;">
+              <div style="color:var(--rose); font-weight:700; margin-bottom:8px">⚠️ Nhược điểm</div>
+              <ul style="color:var(--txt2); padding-left:16px; line-height:1.8">
+                <li>Tốn token API (dùng Gemini Flash để tiết kiệm)</li>
+                <li>Cần fallback khi không có internet</li>
+                <li>Chậm hơn Pandoc (~1-3s/trang)</li>
+              </ul>
+              <div style="margin-top:12px; color:var(--amber); font-size:0.82rem"><strong>Giải pháp:</strong> Dùng Qwen2-VL-7B local (Ollama) làm offline fallback.</div>
+            </div>
+          </div>
+          <div class="code-wrap">
+            <div class="code-header"><span>C# · VlmOcrExtractor.cs</span><span>BIND.Ingestion</span></div>
+            <pre><code>// Render PDF page → image → call Gemini Flash VLM
+var pageImage = await PdfRenderer.RenderPageAsync(filePath, pageIndex, dpi: 300);
+var base64    = Convert.ToBase64String(pageImage);
+
+var systemPrompt = """
+  Bạn là chuyên gia chuyển đổi tài liệu kỹ thuật BIM/AEC.
+  Chuyển trang PDF này thành Markdown chuẩn GFM:
+  - Bảng biểu → Markdown table (| Header |)
+  - Hình ảnh → [Hình: &lt;mô tả chi tiết nội dung kỹ thuật&gt;]
+  - Bỏ qua Header/Footer lặp lại
+  - Giữ số trang ở định dạng [Page N] cuối trang
+  """;
+
+var markdown = await _llmProvider.CompleteWithImageAsync(
+    systemPrompt, base64, model: "gemini-2.5-flash");</code></pre>
+          </div>
+        </div>
+        <div id="vlm-tab2" class="tab-pane">
+          <h4 style="color:var(--emerald); margin-bottom:12px">IBM Docling — Layout-Aware Deep Learning (Giữ Nguyên)</h4>
+          <p style="color:var(--txt2); font-size:0.9rem; margin-bottom:16px">Dùng Table-Transformer + Layout-Analysis models để phân tích cấu trúc trang. Chạy local qua Node.js MCP Tool, không cần internet.</p>
+          <ul style="color:var(--txt2); font-size:0.9rem; padding-left:20px; line-height:1.9">
+            <li>Độ chính xác bảng biểu: <strong style="color:#fff">85-90%</strong></li>
+            <li>Tốc độ: ~1-2s/trang trên CPU</li>
+            <li>Loại bỏ Header/Footer: dựa trên model Layout Detection</li>
+            <li>Ưu tiên dùng cho: PDF bảng biểu phức tạp có đường kẻ rõ ràng</li>
+            <li>Không mô tả được nội dung hình ảnh (chỉ trích ảnh thô)</li>
+          </ul>
+          <div class="hbox hbox-info" style="margin-top:16px">
+            <strong>Routing logic:</strong> Nếu PDF có hình ảnh kỹ thuật → VLM OCR. Nếu PDF thuần bảng biểu + text → Docling. Nếu offline không có API → Docling luôn.
+          </div>
+        </div>
+        <div id="vlm-tab3" class="tab-pane">
+          <h4 style="color:var(--amber); margin-bottom:12px">Pandoc CLI — Độ Chính Xác Tuyệt Đối Cho DOCX (Giữ Nguyên)</h4>
+          <p style="color:var(--txt2); font-size:0.9rem; margin-bottom:16px"><code>pandoc.exe</code> ~40MB đóng gói trong <code>assets/tools/</code>. Chuyển đổi DOCX → GFM trong &lt;50ms, bảo toàn 100% heading, list, bảng biểu.</p>
+          <div class="code-wrap">
+            <div class="code-header"><span>C# · WordTextExtractor.cs</span><span>BIND.Ingestion</span></div>
+            <pre><code>var startInfo = new ProcessStartInfo {
+    FileName  = pandocPath,
+    Arguments = $"\"{filePath}\" -t gfm --wrap=none -o \"{tempOutFile}\"",
+    UseShellExecute  = false,
+    CreateNoWindow   = true
+};</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1rem; color:var(--txt); margin:20px 0 12px">Bảng So Sánh 3 Giải Pháp Ingestion</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tiêu chí</th><th>VLM OCR (Gemini/Qwen2-VL)</th><th>IBM Docling (Local)</th><th>Pandoc CLI (Local)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Bảng biểu PDF</strong></td><td><span class="pill pill-ok">Xuất sắc 95-98%</span></td><td><span class="pill pill-ok">Tốt 85-90%</span></td><td><span class="pill pill-info">N/A (chỉ DOCX)</span></td></tr>
+            <tr><td><strong>Bảng biểu DOCX</strong></td><td><span class="pill pill-amber">Tốt (qua ảnh)</span></td><td><span class="pill pill-info">N/A</span></td><td><span class="pill pill-ok">Tuyệt đối 100%</span></td></tr>
+            <tr><td><strong>Mô tả hình ảnh</strong></td><td><span class="pill pill-ok">Có — LLM tự mô tả</span></td><td><span class="pill pill-hot">Không</span></td><td><span class="pill pill-hot">Không</span></td></tr>
+            <tr><td><strong>Tốc độ</strong></td><td><span class="pill pill-info">~1-3s/trang</span></td><td><span class="pill pill-info">~1-2s/trang</span></td><td><span class="pill pill-ok">&lt;50ms/file</span></td></tr>
+            <tr><td><strong>Offline 100%</strong></td><td><span class="pill pill-amber">Cần Ollama fallback</span></td><td><span class="pill pill-ok">Có</span></td><td><span class="pill pill-ok">Có</span></td></tr>
+            <tr><td><strong>Chi phí</strong></td><td><span class="pill pill-amber">Token API (Flash rẻ)</span></td><td><span class="pill pill-ok">Miễn phí</span></td><td><span class="pill pill-ok">Miễn phí</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 6 · GRAPH RAG ENGINE (NEW)
+    ══════════════════════════════════════════ -->
+    <section id="graph-rag">
+      <div class="section-head">
+        <span class="section-num">06 //</span>
+        <h2>Graph RAG Engine — LightRAG & Neo4j Strategy</h2>
+      </div>
+      <p class="section-lede">
+        Đây là cải tiến kiến trúc cốt lõi của V2 — thay thế custom <code>SimilarityIndexer</code>
+        bằng <strong>LightRAG</strong> framework battle-tested, giải quyết tận gốc vấn đề node biến mất
+        và chi phí rebuild graph khổng lồ mỗi khi thêm tài liệu mới.
+      </p>
+
+      <div class="grid grid-2">
+        <div class="card c-indigo">
+          <div class="card-meta indigo">Vấn Đề Hiện Tại (V1)</div>
+          <h4>Tại Sao Node Liên Kết Biến Mất?</h4>
+          <p>V1 tính cạnh đồ thị bằng Cosine similarity giữa centroid embedding của 2 Entity. Khi tài liệu bị trích xuất sai (heuristics vỡ bảng), centroid vector bị lệch → Weight liên kết rơi xuống dưới threshold → node bị cô lập và biến mất trên D3 Canvas.</p>
+          <div class="hbox hbox-danger" style="margin-top:16px; padding:14px;">
+            <strong>Lỗi gốc rễ:</strong> GraphConnections chỉ là static similarity table — không có incremental update, không có graph traversal thực sự.
+          </div>
+        </div>
+        <div class="card c-emerald">
+          <div class="card-meta emerald">Giải Pháp V2 — LightRAG</div>
+          <h4>LightRAG Incremental Graph Engine</h4>
+          <p>LightRAG (MIT License) xây dựng đồ thị tri thức qua LLM entity extraction, lưu node/edge vào SQLite. Hỗ trợ <strong>incremental update</strong> — chỉ xử lý document mới, không rebuild toàn bộ.</p>
+          <div class="hbox hbox-success" style="margin-top:16px; padding:14px;">
+            <strong>Lợi ích:</strong> Tiết kiệm token ×1000 vs Microsoft GraphRAG. Incremental phù hợp với Revit model thay đổi liên tục.
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.1rem; color:var(--txt); margin:24px 0 16px">So Sánh Graph Storage Strategy</h3>
+      <div class="compare-grid">
+        <div class="compare-header h-old">V1 Hiện Tại (Custom)</div>
+        <div class="compare-header h-new">V2 — LightRAG (SQLite)</div>
+        <div class="compare-header h-eval">V3 Future — Neo4j (Optional)</div>
+
+        <div class="compare-cell h-old">Custom <code>SimilarityIndexer</code> + <code>GraphConnections</code> table (SourceId, TargetId, Weight)</div>
+        <div class="compare-cell h-new"><strong>LightRAG</strong> MIT — entity/relation graph. Node + Edge lưu SQLite. LLM tự extract entities.</div>
+        <div class="compare-cell h-eval"><strong>Neo4j Community</strong> — Native graph DB. Cypher spatial queries. Phù hợp khi cần BIM topology.</div>
+
+        <div class="compare-cell h-old">Rebuild toàn bộ khi thêm doc mới (~O(n²) similarity)</div>
+        <div class="compare-cell h-new">Incremental update — chỉ xử lý doc mới, merge entities</div>
+        <div class="compare-cell h-eval">Incremental + native ACID transaction</div>
+
+        <div class="compare-cell h-old">Không có graph traversal thực sự</div>
+        <div class="compare-cell h-new">Graph + Vector hybrid search (LightRAG built-in)</div>
+        <div class="compare-cell h-eval">Cypher traversal, Spatial topology queries</div>
+
+        <div class="compare-cell h-old">Node biến mất khi cosine &lt; threshold</div>
+        <div class="compare-cell h-new">Node liên kết theo relation type, không phụ thuộc similarity threshold</div>
+        <div class="compare-cell h-eval">Persistent relations, không bao giờ mất node</div>
+
+        <div class="compare-cell h-old">Không deps ngoài thêm</div>
+        <div class="compare-cell h-new">NuGet: LightRAG.Net hoặc Python subprocess</div>
+        <div class="compare-cell h-eval">Java runtime ~500MB, community license</div>
+      </div>
+
+      <div class="hbox hbox-info" style="margin-top:20px">
+        <strong>📋 Quyết định V2:</strong> Bắt đầu với <strong>LightRAG + SQLite</strong> (zero new infrastructure, cùng DB hiện tại).
+        Khi knowledge base &gt;50,000 nodes hoặc cần spatial BIM topology query, <strong>migrate sang Neo4j</strong> embedded.
+        Hai storage dùng cùng <code>IGraphEngine</code> interface — swap không cần thay code caller.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 7 · RAG SEARCH FLOW
+    ══════════════════════════════════════════ -->
+    <section id="rag-flow">
+      <div class="section-head">
+        <span class="section-num">07 //</span>
+        <h2>RAG Search Flow — Hybrid + Reranker + Graph</h2>
+      </div>
+      <p class="section-lede">V2 nâng cấp RAG pipeline từ vector-only lên <strong>3-path hybrid search</strong>: Vector Semantic + BM25 Lexical + <strong>Graph Traversal</strong> (mới). Ba path hợp nhất qua RRF, sau đó Reranker sắp xếp lại độ ưu tiên ngữ cảnh.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1060 500" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .r-lbl { font: 700 11px 'Outfit',sans-serif; fill:#f1f5f9; text-anchor:middle; }
+            .r-sub { font: 400 9.5px 'Outfit',sans-serif; fill:#64748b; text-anchor:middle; }
+            .r-new { font: 700 9px 'Outfit',sans-serif; fill:#06b6d4; text-anchor:middle; }
+            .r-box-q  { fill:rgba(99,102,241,0.2);  stroke:#6366f1; stroke-width:1.5; }
+            .r-box-s  { fill:rgba(6,182,212,0.12);  stroke:#06b6d4; stroke-width:1; }
+            .r-box-g  { fill:rgba(16,185,129,0.12); stroke:#10b981; stroke-width:1; }
+            .r-box-f  { fill:rgba(245,158,11,0.12); stroke:#f59e0b; stroke-width:1; }
+            .r-box-c  { fill:rgba(168,85,247,0.12); stroke:#a855f7; stroke-width:1; }
+            .r-edge   { fill:none; stroke:#334155; stroke-width:1.5; }
+            .r-edge-c { fill:none; stroke:#06b6d4; stroke-width:1.5; stroke-dasharray:5,3; }
+          </style>
+          <defs>
+            <marker id="r-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+            <marker id="r-arr-c" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#06b6d4"/></marker>
+          </defs>
+
+          <!-- Query Input -->
+          <rect x="20" y="210" width="130" height="60" rx="8" class="r-box-q"/>
+          <text x="85" y="236" class="r-lbl">User Query</text>
+          <text x="85" y="252" class="r-sub">Từ Chat Panel</text>
+          <text x="85" y="263" class="r-sub">BGE-M3 embed</text>
+
+          <!-- Path 1: Vector -->
+          <rect x="210" y="100" width="165" height="55" rx="8" class="r-box-s"/>
+          <text x="292" y="123" class="r-lbl">Dense Vector Search</text>
+          <text x="292" y="139" class="r-sub">sqlite-vec · Top-30 Cosine</text>
+
+          <!-- Path 2: BM25 -->
+          <rect x="210" y="220" width="165" height="55" rx="8" class="r-box-g"/>
+          <text x="292" y="243" class="r-lbl">Lexical BM25 Search</text>
+          <text x="292" y="259" class="r-sub">Tantivy · Top-30 Keyword</text>
+
+          <!-- Path 3: Graph (NEW) -->
+          <rect x="210" y="340" width="165" height="55" rx="8" class="r-box-c"/>
+          <text x="292" y="360" class="r-lbl">Graph Traversal</text>
+          <text x="292" y="376" class="r-new">LightRAG · Entity Hop</text>
+          <text x="292" y="391" class="r-sub">Related nodes 2-hop</text>
+
+          <!-- Fusion -->
+          <rect x="440" y="190" width="165" height="90" rx="10" class="r-box-f"/>
+          <text x="522" y="213" class="r-lbl">Hybrid Fusion (RRF)</text>
+          <text x="522" y="230" class="r-sub">Reciprocal Rank Fusion</text>
+          <text x="522" y="248" class="r-sub">Gộp 3 kết quả</text>
+          <text x="522" y="264" class="r-new">BGE-Reranker ONNX CPU</text>
+
+          <!-- Context Assembly -->
+          <rect x="670" y="190" width="170" height="90" rx="10" class="r-box-s"/>
+          <text x="755" y="213" class="r-lbl">Context Assembly</text>
+          <text x="755" y="230" class="r-sub">Top-3 chunks</text>
+          <text x="755" y="246" class="r-sub">+ Pinned entities</text>
+          <text x="755" y="262" class="r-sub">Build Prompt template</text>
+
+          <!-- LLM Decision -->
+          <rect x="670" y="340" width="170" height="60" rx="8" class="r-box-q"/>
+          <text x="755" y="366" class="r-lbl">LLM Routing</text>
+          <text x="755" y="382" class="r-sub">Ollama (simple) / Cloud (complex)</text>
+
+          <!-- Response -->
+          <rect x="900" y="190" width="140" height="90" rx="10" class="r-box-g"/>
+          <text x="970" y="213" class="r-lbl">React Chat Panel</text>
+          <text x="970" y="230" class="r-sub">Token Coalescing</text>
+          <text x="970" y="246" class="r-sub">30-50ms buffer</text>
+          <text x="970" y="262" class="r-sub">60fps smooth stream</text>
+
+          <!-- Edges -->
+          <path d="M150 240 L180 240 L180 127 L210 127" class="r-edge" marker-end="url(#r-arr)"/>
+          <path d="M150 240 L210 247"                   class="r-edge" marker-end="url(#r-arr)"/>
+          <path d="M150 240 L180 240 L180 367 L210 367" class="r-edge-c" marker-end="url(#r-arr-c)"/>
+
+          <path d="M375 127 L410 127 L410 215 L440 215" class="r-edge" marker-end="url(#r-arr)"/>
+          <path d="M375 247 L440 235"                   class="r-edge" marker-end="url(#r-arr)"/>
+          <path d="M375 367 L410 367 L410 265 L440 255" class="r-edge-c" marker-end="url(#r-arr-c)"/>
+
+          <path d="M605 235 L670 235" class="r-edge" marker-end="url(#r-arr)"/>
+          <path d="M755 280 L755 340" class="r-edge" marker-end="url(#r-arr)"/>
+          <path d="M840 235 L900 235" class="r-edge" marker-end="url(#r-arr)"/>
+        </svg>
+      </div>
+      <p class="diagram-cap">Hình 3 — V2 Hybrid RAG: 3 đường tìm kiếm song song (Vector + BM25 + Graph Traversal). Nét đứt cyan = Graph path mới trong V2.</p>
+
+      <div class="grid grid-2" style="margin-top:24px">
+        <div class="card c-amber">
+          <div class="card-meta amber">Routing Logic — Ollama vs Cloud</div>
+          <h4>Quyết Định Chọn LLM Tier</h4>
+          <p>Sau khi assembly context, hệ thống tự động routing:</p>
+          <ul style="color:var(--txt2); font-size:0.88rem; padding-left:18px; margin-top:10px; line-height:1.9">
+            <li><strong>→ Ollama Tier 0:</strong> Query đơn giản, context &lt;4K tokens, không có Revit tool-calling</li>
+            <li><strong>→ Gemini Flash:</strong> AutoTag, tóm tắt, context 4K–32K tokens</li>
+            <li><strong>→ Gemini Pro / Claude:</strong> Revit Agent, reasoning phức tạp, thinking mode</li>
+          </ul>
+        </div>
+        <div class="card c-purple">
+          <div class="card-meta purple">MCP Tool Retrieval (Không Đổi)</div>
+          <h4>Revit Agent Tool Selection</h4>
+          <ul style="color:var(--txt2); font-size:0.88rem; padding-left:18px; margin-top:10px; line-height:1.9">
+            <li>Max <strong>12 tools/lượt</strong> gửi LLM</li>
+            <li>Score: <code>Cosine(BGE-M3(query), BGE-M3(name+desc))</code></li>
+            <li>Lexical boost: +0.20 exact name, +0.10/token &gt;3 chars</li>
+            <li>Denylist: chặn cứng tools nhạy cảm hệ thống</li>
+            <li>Agent loop: max <strong>6 vòng</strong>, temp locked <strong>0.2</strong></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 8 · TECH DECISIONS COMPARISON
+    ══════════════════════════════════════════ -->
+    <section id="tech-decisions">
+      <div class="section-head">
+        <span class="section-num">08 //</span>
+        <h2>So Sánh Quyết Định Kỹ Thuật V1 → V2</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Thành phần</th><th>V1 Hiện Tại</th><th>V2 Đề Xuất</th><th>Lý do nâng cấp</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Graph Storage</strong></td>
+              <td>Custom <code>GraphConnections</code> SQLite table</td>
+              <td><span class="pill pill-new">LightRAG + SQLite</span></td>
+              <td>Incremental, không rebuild, node không biến mất</td>
+            </tr>
+            <tr>
+              <td><strong>Graph Rendering</strong></td>
+              <td>D3-force Canvas</td>
+              <td><span class="pill pill-new">Sigma.js v3 WebGL</span></td>
+              <td>D3 sập &lt;10K nodes. WebGL smooth &gt;100K</td>
+            </tr>
+            <tr>
+              <td><strong>PDF Extraction</strong></td>
+              <td>IBM Docling (bảng) + Tesseract (ảnh)</td>
+              <td><span class="pill pill-new">VLM OCR + Docling fallback</span></td>
+              <td>95-98% vs 85%, tự mô tả ảnh kỹ thuật</td>
+            </tr>
+            <tr>
+              <td><strong>Local LLM</strong></td>
+              <td>Không có — mọi inference đều lên Cloud</td>
+              <td><span class="pill pill-new">Ollama Tier 0 (Qwen/Llama)</span></td>
+              <td>80% tác vụ thường ngày miễn phí + offline</td>
+            </tr>
+            <tr>
+              <td><strong>Data Streams</strong></td>
+              <td>Một pipeline duy nhất cho tất cả</td>
+              <td><span class="pill pill-new">Static + Dynamic tách biệt</span></td>
+              <td>Strategy khác nhau cho quy chuẩn vs Revit model</td>
+            </tr>
+            <tr>
+              <td><strong>RAG Search</strong></td>
+              <td>Vector + BM25 + Reranker</td>
+              <td><span class="pill pill-new">+ Graph Traversal (3-path)</span></td>
+              <td>Thêm quan hệ ngữ nghĩa, entity hop context</td>
+            </tr>
+            <tr>
+              <td><strong>DOCX Extraction</strong></td>
+              <td>Pandoc CLI ✓</td>
+              <td><span class="pill pill-ok">Giữ Nguyên</span></td>
+              <td>Đã hoàn hảo: 100% accuracy, &lt;50ms</td>
+            </tr>
+            <tr>
+              <td><strong>Revit IPC</strong></td>
+              <td>Named Pipe + ExternalEvent ✓</td>
+              <td><span class="pill pill-ok">Giữ + thêm Graph sync event</span></td>
+              <td>Đã production-ready, bổ sung incremental graph trigger</td>
+            </tr>
+            <tr>
+              <td><strong>Token Coalescing</strong></td>
+              <td>30-50ms buffer ✓</td>
+              <td><span class="pill pill-ok">Giữ Nguyên</span></td>
+              <td>Đã giải quyết lag 60fps</td>
+            </tr>
+            <tr>
+              <td><strong>Security</strong></td>
+              <td>NTFS ACL (partial)</td>
+              <td><span class="pill pill-amber">+ DPAPI encryption (planned)</span></td>
+              <td>Bảo vệ API key khỏi malware đọc file</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 9 · ALGORITHMS
+    ══════════════════════════════════════════ -->
+    <section id="algorithms">
+      <div class="section-head">
+        <span class="section-num">09 //</span>
+        <h2>Thông Số Thuật Toán Thực Tế (Ground Truth)</h2>
+      </div>
+      <div class="grid grid-2">
+        <div class="card c-emerald">
+          <h4>Chunking (MarkdownChunker)</h4>
+          <div class="spec-list">
+            <div class="spec-row"><div class="spec-key">Target length</div><div class="spec-val">~500 tokens (~2000 ký tự)</div></div>
+            <div class="spec-row"><div class="spec-key">Max budget</div><div class="spec-val">2000 tokens/chunk</div></div>
+            <div class="spec-row"><div class="spec-key">Overlap</div><div class="spec-val">~50 tokens, prefix tail</div></div>
+            <div class="spec-row" style="border-bottom:none"><div class="spec-key">Boundaries</div><div class="spec-val">Heading + đoạn đầu liền nhau. Code block là nguyên tử. Câu VN split theo Regex.</div></div>
+          </div>
+        </div>
+        <div class="card c-emerald">
+          <h4>Vector Search (sqlite-vec)</h4>
+          <div class="spec-list">
+            <div class="spec-row"><div class="spec-key">Virtual table</div><div class="spec-val"><code>ChunkEmbeddings USING vec0(chunk_id, embedding FLOAT[1024])</code></div></div>
+            <div class="spec-row"><div class="spec-key">Distance</div><div class="spec-val">L2 (BGE-M3 unit-normalized → Cosine = 1 − d²/2)</div></div>
+            <div class="spec-row" style="border-bottom:none"><div class="spec-key">Hard filter</div><div class="spec-val">Cosine Score &lt; 0.5 bị loại</div></div>
+          </div>
+        </div>
+        <div class="card c-cyan">
+          <h4>MCP Tool Retrieval</h4>
+          <div class="spec-list">
+            <div class="spec-row"><div class="spec-key">Max tools/call</div><div class="spec-val">12 tools gửi LLM mỗi lượt</div></div>
+            <div class="spec-row"><div class="spec-key">Score formula</div><div class="spec-val">Cosine(BGE-M3) + lexical boost (+0.20 exact / +0.10/token &gt;3 chars)</div></div>
+            <div class="spec-row" style="border-bottom:none"><div class="spec-key">Safety</div><div class="spec-val">Denylist chặn cứng tools hệ thống nhạy cảm</div></div>
+          </div>
+        </div>
+        <div class="card c-cyan">
+          <h4>Revit Agent Loop</h4>
+          <div class="spec-list">
+            <div class="spec-row"><div class="spec-key">Max iterations</div><div class="spec-val">6 vòng/câu hỏi</div></div>
+            <div class="spec-row"><div class="spec-key">Temperature</div><div class="spec-val">Locked 0.2 (giảm ngẫu nhiên, tăng chính xác tool)</div></div>
+            <div class="spec-row" style="border-bottom:none"><div class="spec-key">Safety gate</div><div class="spec-val">Tools sửa/xóa BIM → Confirm Card bắt buộc, không auto-approve</div></div>
+          </div>
+        </div>
+        <div class="card c-purple">
+          <h4>LightRAG Graph Parameters <span class="pill pill-new">V2</span></h4>
+          <div class="spec-list">
+            <div class="spec-row"><div class="spec-key">Entity extract</div><div class="spec-val">LLM (Ollama Qwen) tự extract từ chunk, dedup theo name normalization</div></div>
+            <div class="spec-row"><div class="spec-key">Graph mode</div><div class="spec-val">Hybrid (vector + graph traversal) cho query phức tạp</div></div>
+            <div class="spec-row"><div class="spec-key">Update mode</div><div class="spec-val">Incremental — chỉ xử lý doc mới/thay đổi</div></div>
+            <div class="spec-row" style="border-bottom:none"><div class="spec-key">Hop depth</div><div class="spec-val">2-hop traversal từ seed entity</div></div>
+          </div>
+        </div>
+        <div class="card c-indigo">
+          <h4>VLM OCR Pipeline <span class="pill pill-new">V2</span></h4>
+          <div class="spec-list">
+            <div class="spec-row"><div class="spec-key">Render DPI</div><div class="spec-val">300 DPI → PNG (balance quality/size)</div></div>
+            <div class="spec-row"><div class="spec-key">Primary model</div><div class="spec-val">Gemini 2.5 Flash (rẻ, nhanh, 1M context)</div></div>
+            <div class="spec-row"><div class="spec-key">Offline fallback</div><div class="spec-val">Qwen2-VL-7B qua Ollama (miễn phí, local)</div></div>
+            <div class="spec-row" style="border-bottom:none"><div class="spec-key">Routing rule</div><div class="spec-val">PDF có hình kỹ thuật → VLM. Chỉ bảng → Docling. DOCX → Pandoc.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 10 · ROADMAP
+    ══════════════════════════════════════════ -->
+    <section id="roadmap">
+      <div class="section-head">
+        <span class="section-num">10 //</span>
+        <h2>Lộ Trình Nâng Cấp V2 — Theo Thứ Tự ROI</h2>
+      </div>
+      <p class="section-lede">4 giai đoạn thực thi xếp theo tỷ suất hiệu quả / công sức (ROI giảm dần).</p>
+
+      <div class="roadmap">
+        <div class="rm-item">
+          <div class="rm-dot d1">M1</div>
+          <div class="rm-body">
+            <h4 style="color:var(--rose)">Ổn Định UI &amp; Trải Nghiệm <span class="pill pill-hot">CRITICAL · 1-2 ngày</span></h4>
+            <p>Các fix có ROI cao nhất, ảnh hưởng trực tiếp đến UX hàng ngày.</p>
+            <ul>
+              <li>✅ Token Coalescing 30-50ms tại C# Bridge (chống lag chat 60fps)</li>
+              <li>✅ HWND Subclassing cho frameless window resize chính xác</li>
+              <li>🔄 Tối ưu WebView2 memory cache</li>
+              <li>🔄 Token Cap UI + real-time cost estimate trước khi chat</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rm-item">
+          <div class="rm-dot d2">M2</div>
+          <div class="rm-body">
+            <h4 style="color:var(--amber)">Nâng Cấp Ingestion — VLM OCR + Ollama <span class="pill pill-amber">HIGH · 2-3 ngày</span></h4>
+            <p>Nâng chất lượng dữ liệu đầu vào RAG từ &quot;đủ dùng&quot; lên &quot;xuất sắc&quot;.</p>
+            <ul>
+              <li>🆕 VlmOcrExtractor.cs — Gemini Flash OCR pipeline cho PDF phức tạp</li>
+              <li>🆕 Cài đặt Ollama endpoint trong bind_config.json + OllamaProvider</li>
+              <li>🆕 Routing logic: PDF có ảnh → VLM; thuần bảng → Docling; DOCX → Pandoc</li>
+              <li>🆕 Qwen2-VL-7B pull qua Ollama làm VLM offline fallback</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rm-item">
+          <div class="rm-dot d3">M3</div>
+          <div class="rm-body">
+            <h4 style="color:var(--cyan)">Graph RAG Engine — LightRAG + Dual Stream <span class="pill pill-info">MEDIUM · 3-5 ngày</span></h4>
+            <p>Giải quyết tận gốc vấn đề node biến mất và chất lượng retrieval.</p>
+            <ul>
+              <li>🆕 Tích hợp LightRAG (NuGet/Python subprocess) vào BIND.AI</li>
+              <li>🆕 IGraphEngine interface + LightRagEngine implementation</li>
+              <li>🆕 GraphNodes / GraphEdges schema migration trong SQLite</li>
+              <li>🆕 Dual Stream Router: Static doc → Community graph; Revit event → Incremental graph</li>
+              <li>🆕 Graph Traversal path trong RAG Hybrid Search (3-path RRF)</li>
+              <li>🆕 Graph Query MCP tool cho Revit Agent</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rm-item">
+          <div class="rm-dot d4">M4</div>
+          <div class="rm-body">
+            <h4 style="color:var(--emerald)">WebGL Graph + Bảo Mật <span class="pill pill-ok">LOW · 3-4 ngày</span></h4>
+            <p>Chuẩn bị scale cho knowledge base lớn và tăng cường security.</p>
+            <ul>
+              <li>🆕 Chuyển Graph View từ D3 Canvas sang <strong>Sigma.js v3 WebGL</strong></li>
+              <li>🆕 Smooth render &gt;10,000 nodes, cluster view, LOD</li>
+              <li>🆕 Mã hóa API keys trong bind_config.json bằng Windows <strong>DPAPI</strong></li>
+              <li>🆕 Sensitive data filter trước khi gửi chunk lên Cloud LLM</li>
+              <li>⚡ (Optional) Thử nghiệm Neo4j embedded nếu cần BIM spatial query</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         SECTION 11 · RISKS
+    ══════════════════════════════════════════ -->
+    <section id="risks">
+      <div class="section-head">
+        <span class="section-num">11 //</span>
+        <h2>Quản Trị Rủi Ro Kỹ Thuật</h2>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card c-rose">
+          <div class="card-meta rose">🔴 Rủi Ro Cao</div>
+          <h4>API Key Plaintext trong Config</h4>
+          <p>Tệp <code>bind_config.json</code> chứa API keys dạng thô. Nếu máy nhiễm malware → key bị đánh cắp.</p>
+          <div class="hbox hbox-danger" style="margin-top:12px; padding:12px; font-size:0.82rem">
+            <strong>Giải pháp:</strong> Windows DPAPI encryption — chỉ đúng Windows account mới giải mã được. Thực hiện trong M4.
+          </div>
+        </div>
+
+        <div class="card c-amber">
+          <div class="card-meta amber">🟡 Rủi Ro Trung Bình</div>
+          <h4>Chi Phí VLM OCR Token</h4>
+          <p>Nếu ingest nhiều PDF lớn qua Gemini Flash, token cost có thể tăng vọt (~1000 tokens/trang).</p>
+          <div class="hbox hbox-warn" style="margin-top:12px; padding:12px; font-size:0.82rem">
+            <strong>Giải pháp:</strong> Chỉ dùng VLM cho PDF có hình ảnh (detect bằng metadata). PDF thuần văn bản/bảng → Docling. Qwen2-VL local làm free fallback.
+          </div>
+        </div>
+
+        <div class="card c-amber">
+          <div class="card-meta amber">🟡 Rủi Ro Trung Bình</div>
+          <h4>LightRAG Integration Complexity</h4>
+          <p>LightRAG chủ yếu là Python library. Tích hợp vào .NET cần Python subprocess hoặc tìm .NET port.</p>
+          <div class="hbox hbox-warn" style="margin-top:12px; padding:12px; font-size:0.82rem">
+            <strong>Giải pháp:</strong> Option A — Python subprocess wrapper (như Docling MCP pattern). Option B — Implement lightweight LightRAG-like logic trực tiếp trong C# dùng SQLite + BGE-M3.
+          </div>
+        </div>
+
+        <div class="card c-emerald">
+          <div class="card-meta emerald">🟢 Lợi Thế Bền Vững</div>
+          <h4>Offline-First là Lõi Không Thể Bỏ</h4>
+          <p>Tất cả tác vụ Ingest, Embed, Search, Graph render hoạt động 100% offline. Cloud LLM là optional enhancement.</p>
+          <div class="hbox hbox-success" style="margin-top:12px; padding:12px; font-size:0.82rem">
+            <strong>V2 tăng cường:</strong> Ollama Tier 0 làm cho ngay cả Chat LLM cũng offline được — hệ thống hoạt động hoàn toàn không cần internet.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // ── Tab switching ──
+  function switchTab(btn, id) {
+    const container = btn.closest('.tabs');
+    container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    container.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Active nav link on scroll ──
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks  = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => {
+          l.classList.toggle('active', l.getAttribute('href') === '#' + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

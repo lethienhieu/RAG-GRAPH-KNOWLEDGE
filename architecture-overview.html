@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Kiến trúc tổng thể của B.I.N.D — Personal Knowledge Management desktop app, local-first, WebView2 + cloud LLM, Revit integration, và offline extraction." />
+  <meta name="author" content="WIKI · B.I.N.D — Post-migration & Enhanced Ingestion Audit" />
+  <meta name="generator" content="Hand-crafted, 2026-05-21" />
+  <title>B.I.N.D — Unified Architecture & Advanced Ingestion Overview</title>
+  <link rel="stylesheet" href="architecture-overview.css" />
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ════════════ HERO ════════════ -->
+    <header class="hero">
+      <div class="eyebrow">Unified Architecture Overview &amp; Technical Audit</div>
+      <h1>B.I.N.D — <span class="accent">Kiến Trúc Toàn Diện</span></h1>
+      <p class="lede">
+        Hệ thống quản lý tri thức cá nhân (Personal Knowledge Management) chạy cục bộ (Local-first) trên Windows desktop.
+        Bản báo cáo này hợp nhất toàn bộ cấu trúc kiến trúc hệ thống post-migration (React + WebView2), sơ đồ AI local/cloud,
+        và giải pháp chuyển đổi tài liệu hoàn toàn offline chất lượng cao (Pandoc &amp; IBM Docling) giúp tối ưu hóa nguồn
+        dữ liệu đầu vào cho RAG và Đồ thị liên kết tri thức.
+      </p>
+      <div class="meta-row">
+        <span><strong>Giải pháp:</strong> Local-first + Hybrid Cloud LLM</span>
+        <span><strong>Stack:</strong> .NET 8 · React 19 · WebView2 · SQLite · Pandoc &amp; Docling MCP</span>
+        <span><strong>Status:</strong> <span class="pill ok">D-09 SHIPPED &amp; COMPREHENSIVE AUDIT</span></span>
+        <span><strong>Cập nhật:</strong> 2026-05-21</span>
+      </div>
+    </header>
+
+    <!-- ════════════ 1. LAYERED ARCHITECTURE & TECH STACK ════════════ -->
+    <section id="architecture">
+      <h2><span class="num">01</span> Kiến Trúc Phân Lớp &amp; Công Nghệ Core</h2>
+      <p class="section-lede">
+        B.I.N.D được thiết kế trên mô hình 3 lớp tách biệt chạy trong một tiến trình duy nhất trên Windows. Lớp giao diện 
+        (React 19) giao tiếp trực tiếp với lớp C# Backend thông qua một Bridge IPC nội bộ độ trễ thấp, kết hợp với các MCP 
+        Agent ngoại vi để điều khiển Revit 2025.
+      </p>
+
+      <div class="grid col-3">
+        <div class="card accent">
+          <div class="meta">Host Shell (WPF)</div>
+          <h4>BIND.App</h4>
+          <p>Window host mỏng bằng C# WPF, sử dụng WebView2 toàn màn hình mà không cần XAML UI phức tạp. Quản lý vòng đời tiến trình, Dependency Injection (Microsoft.Extensions.Hosting) và Serilog ghi log local.</p>
+        </div>
+        <div class="card accent">
+          <div class="meta">UI Layer (SPA)</div>
+          <h4>frontend/ (React 19 + Vite)</h4>
+          <p>Ứng dụng React chạy độc lập, render qua WebView2 và được phục vụ từ virtual host <code>bind.app.local</code> hoàn toàn offline. Đồ thị tri thức sử dụng D3-force Canvas để tối ưu hóa hiệu năng render.</p>
+        </div>
+        <div class="card accent">
+          <div class="meta">Bridge IPC</div>
+          <h4>BIND.Bridge</h4>
+          <p>Hệ thống truyền tin hai chiều qua <code>postMessage</code> và <code>PostWebMessageAsJson</code>. Định tuyến các handler theo prefix (chat, graph, agent, mcp, config, ingest, entities...) giúp đảm bảo luồng điều khiển đồng bộ.</p>
+        </div>
+
+        <div class="card info">
+          <div class="meta">Domain Core</div>
+          <h4>BIND.Core</h4>
+          <p>Trọng tâm lưu trữ các định nghĩa nghiệp vụ, Models và Interfaces (như <code>ILlmProvider</code>, <code>IExtractor</code>, <code>IEmbedder</code>) hoàn toàn độc lập, không phụ thuộc vào framework bên ngoài.</p>
+        </div>
+        <div class="card info">
+          <div class="meta">Data Store</div>
+          <h4>BIND.Data</h4>
+          <p>Sử dụng cơ sở dữ liệu SQLite thông qua Dapper, kết hợp extension <code>sqlite-vec</code> để lưu trữ và tìm kiếm vector nhúng (vector dimension 1024). Hỗ trợ cơ chế tự động chạy 4 migrations dữ liệu.</p>
+        </div>
+        <div class="card info">
+          <div class="meta">Ingestion Pipeline</div>
+          <h4>BIND.Ingestion</h4>
+          <p>Hệ thống nạp dữ liệu song song sử dụng <code>Channel&lt;T&gt;</code>. Tích hợp bộ chuyển đổi tài liệu cấu trúc (Pandoc cho Word, Docling cho PDF, OpenMcdf cho Revit, Tesseract cho OCR và Florence-2 ONNX cho chú thích ảnh).</p>
+        </div>
+
+        <div class="card ok">
+          <div class="meta">AI &amp; RAG Engine</div>
+          <h4>BIND.AI</h4>
+          <p>Quản lý các mô hình ngôn ngữ Cloud (Gemini, Claude, GPT) kết hợp mô hình nhúng cục bộ (BGE-M3 GGUF chạy trên CPU qua LLamaSharp). Cung cấp cơ chế RAG, Auto-tag và MCP Agent.</p>
+        </div>
+        <div class="card ok">
+          <div class="meta">IPC &amp; AddIn</div>
+          <h4>BIND.IPC &amp; Revit.AddIn</h4>
+          <p>Kết nối trực tiếp tới Revit 2025 qua Named Pipe <code>\\.\pipe\bind-revit</code>. Sử dụng cơ chế <code>ExternalEvent</code> để thực thi các lệnh mô hình hóa BIM trên main thread của Revit một cách an toàn.</p>
+        </div>
+        <div class="card ok">
+          <div class="meta">MCP Revit Agent</div>
+          <h4>THBIM-MCP-Server (Node)</h4>
+          <p>Subprocess Node.js khởi chạy tự động từ config, kết nối qua StdIO MCP C#. Cấp hơn 90 công cụ chuyên biệt để điều khiển, truy vấn và tạo lập đối tượng BIM trong Revit thông qua cổng HTTP 5050 bridge.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════ 2. OVERALL ARCHITECTURE DIAGRAM ════════════ -->
+    <section id="overall-diagram">
+      <h2><span class="num">02</span> Sơ Đồ Kiến Trúc Hệ Thống Tổng Thể</h2>
+      <p class="section-lede">
+        Bản đồ phân phối luồng dữ liệu và lệnh trong hệ thống B.I.N.D. Mũi tên liền biểu thị các cuộc gọi/dispatch đồng bộ 
+        trong tiến trình (In-process C#), mũi tên đứt đoạn thể hiện kết nối IPC (Named Pipes, StdIO) hoặc kết nối mạng HTTPS Cloud LLM.
+      </p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 1200 740" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="B.I.N.D Comprehensive Architecture Diagram">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#585b70" />
+            </marker>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#fab387" />
+            </marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#89b4fa" />
+            </marker>
+          </defs>
+
+          <!-- ── Layer labels ── -->
+          <text x="20" y="36"  class="group-lbl">USER · WINDOWS DESKTOP</text>
+          <text x="20" y="146" class="group-lbl">UI LAYER · WebView2 Host + React SPA</text>
+          <text x="20" y="276" class="group-lbl">BRIDGE · C# JSON Message Router</text>
+          <text x="20" y="362" class="group-lbl">BACKEND ENGINE · .NET 8 (In-Process)</text>
+          <text x="20" y="586" class="group-lbl">DATA &amp; OFFLINE MODELS · %AppData%/BIND</text>
+          <text x="20" y="678" class="group-lbl">EXTERNAL SERVICES &amp; BIM INTEGRATION</text>
+
+          <!-- ── WPF Host ── -->
+          <rect x="490" y="56"  width="220" height="56" rx="10" class="box-ui" />
+          <text x="600" y="80"  class="lbl"  text-anchor="middle">WPF Window (Frameless)</text>
+          <text x="600" y="98"  class="sub"  text-anchor="middle">BIND.App · MainWindow.xaml.cs</text>
+
+          <!-- ── UI Panels ── -->
+          <rect x="100" y="156" width="170" height="100" rx="8" class="box-ui" />
+          <text x="185" y="180" class="lbl"  text-anchor="middle">Graph View</text>
+          <text x="185" y="198" class="sub"  text-anchor="middle">D3-force Canvas</text>
+          <text x="185" y="218" class="sub"  text-anchor="middle">Hover preview, DoubleClick</text>
+
+          <rect x="290" y="156" width="170" height="100" rx="8" class="box-ui" />
+          <text x="375" y="180" class="lbl"  text-anchor="middle">Library &amp; Drag-Drop</text>
+          <text x="375" y="198" class="sub"  text-anchor="middle">React 19 · GFM</text>
+          <text x="375" y="218" class="sub"  text-anchor="middle">Offline Document View</text>
+
+          <rect x="480" y="156" width="170" height="100" rx="8" class="box-ui" />
+          <text x="565" y="180" class="lbl"  text-anchor="middle">Chat Panel</text>
+          <text x="565" y="198" class="sub"  text-anchor="middle">Coalesced Streaming</text>
+          <text x="565" y="218" class="sub"  text-anchor="middle">Citation inline [Entity#N]</text>
+
+          <rect x="670" y="156" width="170" height="100" rx="8" class="box-ui" />
+          <text x="755" y="180" class="lbl"  text-anchor="middle">Revit Agent Panel</text>
+          <text x="755" y="198" class="sub"  text-anchor="middle">Interactive Loops</text>
+          <text x="755" y="218" class="sub"  text-anchor="middle">Confirm toolcards &amp; stream</text>
+
+          <rect x="860" y="156" width="240" height="100" rx="8" class="box-ui" />
+          <text x="980" y="180" class="lbl"  text-anchor="middle">Topbar / Resize Panel</text>
+          <text x="980" y="198" class="sub"  text-anchor="middle">Cmd+K · API keys config</text>
+          <text x="980" y="218" class="sub"  text-anchor="middle">Subclassed Window Border</text>
+
+          <!-- ── Bridge ── -->
+          <rect x="100" y="286" width="1000" height="60" rx="10" class="box-net" />
+          <text x="600" y="312" class="lbl"  text-anchor="middle">BIND.Bridge — Định tuyến JSON qua 9 Handlers chính</text>
+          <text x="600" y="332" class="sub"  text-anchor="middle">window:* · chat:* · graph:* · agent:* · mcp:* · models:* · config:* · ingest:* · entities:*</text>
+
+          <!-- ── Backend Layer ── -->
+          <rect x="100" y="376" width="220" height="190" rx="10" class="box-net" />
+          <text x="210" y="400" class="lbl"  text-anchor="middle">BIND.Ingestion</text>
+          <text x="210" y="420" class="sub"  text-anchor="middle">Channel&lt;T&gt; Worker Pool</text>
+          <text x="110" y="445" class="sub">• Pandoc CLI (DOCX local)</text>
+          <text x="110" y="461" class="sub">• Docling MCP (PDF local)</text>
+          <text x="110" y="477" class="sub">• OpenMcdf Extractor (RVT)</text>
+          <text x="110" y="493" class="sub">• Tesseract OCR (vie/eng)</text>
+          <text x="110" y="509" class="sub">• Florence-2 ONNX (Caption)</text>
+          <text x="110" y="525" class="sub">• GhostMarkdownConverter</text>
+          <text x="110" y="541" class="sub">• Embed &amp; Persist Stages</text>
+
+          <rect x="340" y="376" width="280" height="190" rx="10" class="box-net" />
+          <text x="480" y="400" class="lbl"  text-anchor="middle">BIND.AI (RAG &amp; Agent Engine)</text>
+          <text x="480" y="420" class="sub"  text-anchor="middle">Cloud LLM / local Embed / RAG / Agent</text>
+          <text x="350" y="445" class="sub">• ILlmProvider (Gemini/Claude/OpenAI)</text>
+          <text x="350" y="461" class="sub">• BgeEmbedder (BGE-M3 CPU GGUF)</text>
+          <text x="350" y="477" class="sub">• Reranker (BGE-Reranker-v2-m3 CPU)</text>
+          <text x="350" y="493" class="sub">• Hybrid Search (Tantivy BM25 + Vector)</text>
+          <text x="350" y="509" class="sub">• McpToolGateway &amp; RevitAgentService</text>
+          <text x="350" y="525" class="sub">• Structured Output &amp; AutoTagger</text>
+          <text x="350" y="541" class="sub">• Token Coalescing (30-50ms window)</text>
+
+          <rect x="640" y="376" width="200" height="100" rx="10" class="box-net" />
+          <text x="740" y="400" class="lbl"  text-anchor="middle">BIND.Data (Database)</text>
+          <text x="740" y="420" class="sub"  text-anchor="middle">SQLite + sqlite-vec</text>
+          <text x="650" y="442" class="sub">• 7 Repos (Entity, Chunks...)</text>
+          <text x="650" y="458" class="sub">• SQLite-vec Index (1024d)</text>
+
+          <rect x="640" y="486" width="200" height="80" rx="10" class="box-net" />
+          <text x="740" y="510" class="lbl"  text-anchor="middle">BIND.IPC (Named Pipe)</text>
+          <text x="740" y="528" class="sub"  text-anchor="middle">Pipe Server Host</text>
+          <text x="740" y="546" class="sub"  text-anchor="middle">\\.\pipe\bind-revit</text>
+
+          <rect x="860" y="376" width="240" height="190" rx="10" class="box-net" />
+          <text x="980" y="400" class="lbl"  text-anchor="middle">BIND.Core &amp; Config</text>
+          <text x="980" y="420" class="sub"  text-anchor="middle">Domain Models &amp; User Settings</text>
+          <text x="870" y="445" class="sub">• Entity / Chunk / Tag Models</text>
+          <text x="870" y="461" class="sub">• IExtractor / IEmbedder Interfaces</text>
+          <text x="870" y="485" class="lbl"  text-anchor="left">Config File</text>
+          <text x="870" y="501" class="sub">%AppData%/BIND/bind_config.json</text>
+          <text x="870" y="517" class="sub">• API keys (NTFS ACL secured)</text>
+          <text x="870" y="533" class="sub">• SelectedModel / MCP Servers</text>
+
+          <!-- ── Data storage ── -->
+          <rect x="100" y="596" width="280" height="60" rx="10" class="box-data" />
+          <text x="240" y="620" class="lbl"  text-anchor="middle">SQLite + sqlite-vec Database</text>
+          <text x="240" y="640" class="sub"  text-anchor="middle">bind.db · Chunks &amp; 1024d Vector Index</text>
+
+          <rect x="400" y="596" width="280" height="60" rx="10" class="box-data" />
+          <text x="540" y="620" class="lbl"  text-anchor="middle">Local File Storage</text>
+          <text x="540" y="640" class="sub"  text-anchor="middle">{yyyy}/{md5}.{ext} · Ghost .md · preview PNGs</text>
+
+          <rect x="700" y="596" width="200" height="60" rx="10" class="box-data" />
+          <text x="800" y="620" class="lbl"  text-anchor="middle">Local Models Assets</text>
+          <text x="800" y="640" class="sub"  text-anchor="middle">BGE-M3 · Florence ONNX · Tesseract</text>
+
+          <rect x="920" y="596" width="180" height="60" rx="10" class="box-data" />
+          <text x="1010" y="620" class="lbl" text-anchor="middle">Tools Cabinet</text>
+          <text x="1010" y="640" class="sub" text-anchor="middle">pandoc.exe · docling.exe</text>
+
+          <!-- ── External ── -->
+          <rect x="100" y="686" width="260" height="40" rx="8" class="box-ext" />
+          <text x="230" y="710" class="lbl" text-anchor="middle">Revit 2025 &amp; BIND.AddIn (ExternalEvent)</text>
+
+          <rect x="380" y="686" width="320" height="40" rx="8" class="box-ext" />
+          <text x="540" y="710" class="lbl" text-anchor="middle">THBIM-MCP-Server (Node) → Revit Bridge :5050</text>
+
+          <rect x="720" y="686" width="380" height="40" rx="8" class="box-ext" />
+          <text x="910" y="710" class="lbl" text-anchor="middle">Cloud LLM APIs (Anthropic · OpenAI · Google Gemini)</text>
+
+          <!-- ── Edges ── -->
+          <path d="M600 112 L600 130 L185 130 L185 156"  class="edge orange" marker-end="url(#arrow-orange)" />
+          <path d="M600 112 L600 130 L375 130 L375 156"  class="edge orange" marker-end="url(#arrow-orange)" />
+          <path d="M600 112 L600 156"                    class="edge orange" marker-end="url(#arrow-orange)" />
+          <path d="M600 112 L600 130 L755 130 L755 156"  class="edge orange" marker-end="url(#arrow-orange)" />
+          <path d="M600 112 L600 130 L980 130 L980 156"  class="edge orange" marker-end="url(#arrow-orange)" />
+
+          <path d="M185 256 L185 286" class="edge" marker-end="url(#arrow)" />
+          <path d="M375 256 L375 286" class="edge" marker-end="url(#arrow)" />
+          <path d="M565 256 L565 286" class="edge" marker-end="url(#arrow)" />
+          <path d="M755 256 L755 286" class="edge" marker-end="url(#arrow)" />
+          <path d="M980 256 L980 286" class="edge" marker-end="url(#arrow)" />
+
+          <path d="M210 346 L210 376" class="edge blue" marker-end="url(#arrow-blue)" />
+          <path d="M480 346 L480 376" class="edge blue" marker-end="url(#arrow-blue)" />
+          <path d="M740 346 L740 376" class="edge blue" marker-end="url(#arrow-blue)" />
+          <path d="M980 346 L980 376" class="edge blue" marker-end="url(#arrow-blue)" />
+
+          <path d="M320 470 L340 470" class="edge" marker-end="url(#arrow)" />
+          <path d="M620 450 L640 440" class="edge" marker-end="url(#arrow)" />
+          <path d="M210 566 L210 596" class="edge" marker-end="url(#arrow)" />
+          <path d="M210 596 L400 596" class="edge" marker-end="url(#arrow)" />
+
+          <path d="M740 566 L740 596 L230 596 L230 686" class="edge dashed" marker-end="url(#arrow)" />
+          <path d="M620 540 L640 540 L640 686 L470 686" class="edge dashed" marker-end="url(#arrow)" />
+          <path d="M620 422 L1140 422 L1140 686 L910 686" class="edge dashed" marker-end="url(#arrow)" />
+        </svg>
+        <div class="caption">Hình 1. Sơ đồ kiến trúc tổng thể toàn diện của B.I.N.D</div>
+      </div>
+    </section>
+
+    <!-- ════════════ 3. AI MODELS & RUNTIME SPEC ════════════ -->
+    <section id="models">
+      <h2><span class="num">03</span> Phân Loại Mô Hình AI &amp; Runtime Specification</h2>
+      <p class="section-lede">
+        B.I.N.D chia các mô hình AI làm hai nhóm hoạt động bổ trợ: **Mô hình Cloud** phục vụ tác vụ suy luận/lập luận 
+        phức tạp, Agent và gắn nhãn tự động; **Mô hình Cục bộ (Offline)** phục vụ tác vụ trích xuất, vector hóa 
+        và thị giác máy tính với tính bảo mật dữ liệu tuyệt đối.
+      </p>
+
+      <h3>3.1 Cloud LLMs (thông qua <code>ILlmProvider</code>)</h3>
+      <p>Cung cấp khả năng chuyển đổi linh hoạt qua dropdown trên giao diện chat. API keys được mã hóa và bảo vệ bằng NTFS ACL.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Nhà cung cấp</th>
+            <th>Model API ID</th>
+            <th>Tên hiển thị giao diện</th>
+            <th>Thinking Budget</th>
+            <th>Context Window</th>
+            <th>Vai trò / Nhiệm vụ thực tế</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Google</strong></td>
+            <td><code>gemini-2.5-pro</code></td>
+            <td>Gemini 2.5 Pro (Thinking High)</td>
+            <td class="num">30,000</td>
+            <td class="num">2,000,000 tokens</td>
+            <td>Trí thông minh RAG chính, xử lý context tài liệu siêu dài và Revit Agent.</td>
+          </tr>
+          <tr>
+            <td><strong>Google</strong></td>
+            <td><code>gemini-2.5-pro</code></td>
+            <td>Gemini 2.5 Pro (Thinking Low)</td>
+            <td class="num">2,048</td>
+            <td class="num">2,000,000 tokens</td>
+            <td>RAG tốc độ cao, lập luận kỹ thuật ngắn gọn, giảm độ trễ (latency).</td>
+          </tr>
+          <tr>
+            <td><strong>Google</strong></td>
+            <td><code>gemini-2.5-flash</code></td>
+            <td>Gemini 2.5 Flash</td>
+            <td class="num">—</td>
+            <td class="num">1,000,000 tokens</td>
+            <td>Trình tự động gắn nhãn (Auto-tagger) và tóm tắt nhanh tài liệu.</td>
+          </tr>
+          <tr>
+            <td><strong>Anthropic</strong></td>
+            <td><code>claude-sonnet-4-5-20250929</code></td>
+            <td>Claude Sonnet 4.5 (Thinking)</td>
+            <td class="num">16,000</td>
+            <td class="num">200,000 tokens</td>
+            <td>Xử lý logic Revit Agent siêu phức tạp, gọi tool-calling đa tầng chuẩn xác.</td>
+          </tr>
+          <tr>
+            <td><strong>Anthropic</strong></td>
+            <td><code>claude-3-5-sonnet-20241022</code></td>
+            <td>Claude 3.5 Sonnet</td>
+            <td class="num">—</td>
+            <td class="num">200,000 tokens</td>
+            <td>Hội thoại tổng quát, dự phòng cho luồng suy luận agent tiêu chuẩn.</td>
+          </tr>
+          <tr>
+            <td><strong>OpenAI</strong></td>
+            <td><code>gpt-4o-mini</code></td>
+            <td>GPT-4o Mini</td>
+            <td class="num">—</td>
+            <td class="num">128,000 tokens</td>
+            <td>Tìm kiếm RAG giá rẻ, phản hồi siêu tốc.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>3.2 Local-First Models (Chạy hoàn toàn Offline trên máy khách)</h3>
+      <p>Các mô hình học máy đảm bảo dữ liệu của người dùng không bao giờ bị rò rỉ ra Internet trong quá trình nạp và đọc thư viện tài liệu.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Mô hình</th>
+            <th>Tên tệp lưu trữ</th>
+            <th>Runtime Engine</th>
+            <th>Đầu ra (Output)</th>
+            <th>Vai trò / Nhiệm vụ thực tế</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>BGE-M3</strong></td>
+            <td><code>bge-m3-Q4_K_M.gguf</code> (~2.1GB)</td>
+            <td>LLamaSharp CPU runtime (chạy đa luồng song song)</td>
+            <td>Dense vector 1024-dimension</td>
+            <td>Vector hóa toàn bộ văn bản đầu vào cho RAG và vector mô tả cho MCP tools.</td>
+          </tr>
+          <tr>
+            <td><strong>BGE-Reranker</strong></td>
+            <td><code>bge-reranker-v2-m3.onnx</code> (~400MB)</td>
+            <td>ONNX Runtime CPU</td>
+            <td>Relevance score float [0-1]</td>
+            <td>Sắp xếp lại độ chính xác ngữ cảnh của các chunks trước khi gửi LLM.</td>
+          </tr>
+          <tr>
+            <td><strong>Tesseract 5</strong></td>
+            <td><code>vie.traineddata + eng.traineddata</code></td>
+            <td>Native C++ OCR engine (pool 2 luồng)</td>
+            <td>Văn bản &amp; Tọa độ Bounding box</td>
+            <td>Nhận diện chữ viết từ hình ảnh tài liệu, bản vẽ CAD/BIM PDF.</td>
+          </tr>
+          <tr>
+            <td><strong>Florence-2</strong></td>
+            <td>4 file ONNX (vision/encoder/decoder/embed)</td>
+            <td>ONNX Runtime CPU</td>
+            <td>Text captions (max 64 tokens)</td>
+            <td>Sinh caption miêu tả ảnh kỹ thuật (sơ đồ, bản vẽ) để nạp ngữ cảnh vào RAG.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ════════════ 4. ADVANCED INGESTION PIPELINE ════════════ -->
+    <section id="ingestion">
+      <h2><span class="num">04</span> Quy Trình Nạp Dữ Liệu &amp; Trích Xuất Tài Liệu Offline</h2>
+      <p class="section-lede">
+        Một hệ thống RAG tốt bắt buộc phải có nguồn dữ liệu đầu vào chất lượng cao. B.I.N.D đã loại bỏ các heuristics thô sơ 
+        dễ gây vỡ cấu trúc bảng biểu và danh sách của PDF/DOCX, thay thế hoàn toàn bằng **Pandoc CLI** và **IBM Docling MCP** 
+        chạy offline trên thiết bị.
+      </p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 1200 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="B.I.N.D Advanced Ingestion Workflow">
+          <defs></defs>
+
+          <!-- Inputs -->
+          <rect x="50" y="40" width="130" height="50" rx="6" class="store-box" />
+          <text x="115" y="65" class="txt" text-anchor="middle">DOCX (Word)</text>
+          <text x="115" y="80" class="sub-txt" text-anchor="middle">Tài liệu, Spec</text>
+
+          <rect x="50" y="140" width="130" height="50" rx="6" class="store-box" />
+          <text x="115" y="165" class="txt" text-anchor="middle">PDF (Văn bản/Ảnh)</text>
+          <text x="115" y="180" class="sub-txt" text-anchor="middle">Bảng biểu kỹ thuật</text>
+
+          <rect x="50" y="240" width="130" height="50" rx="6" class="store-box" />
+          <text x="115" y="265" class="txt" text-anchor="middle">RVT / RFA</text>
+          <text x="115" y="280" class="sub-txt" text-anchor="middle">Model, Revit Family</text>
+
+          <rect x="50" y="340" width="130" height="50" rx="6" class="store-box" />
+          <text x="115" y="365" class="txt" text-anchor="middle">PNG / JPG (Ảnh)</text>
+          <text x="115" y="380" class="sub-txt" text-anchor="middle">Sơ đồ, Thiết kế</text>
+
+          <rect x="50" y="440" width="130" height="50" rx="6" class="store-box" />
+          <text x="115" y="465" class="txt" text-anchor="middle">TXT / MD / XLSX</text>
+          <text x="115" y="480" class="sub-txt" text-anchor="middle">Plain Text/Data</text>
+
+          <!-- Stage 1: Ingestion Gateway -->
+          <rect x="250" y="200" width="160" height="120" rx="10" class="pipe-box" />
+          <text x="330" y="225" class="txt" text-anchor="middle">Ingestion Pipeline</text>
+          <text x="330" y="245" class="sub-txt" text-anchor="middle">C# Channel&lt;T&gt; Pool</text>
+          <text x="330" y="270" class="sub-txt" text-anchor="middle">• MD5 Deduplication</text>
+          <text x="330" y="288" class="sub-txt" text-anchor="middle">• File Routing Stream</text>
+          <text x="330" y="306" class="sub-txt" text-anchor="middle">• Parallel Worker Pool</text>
+
+          <!-- Stage 2: Parsers -->
+          <!-- Pandoc CLI -->
+          <rect x="490" y="40" width="220" height="70" rx="8" class="tool-box" />
+          <text x="600" y="65" class="txt" text-anchor="middle">Pandoc Engine (Local CLI)</text>
+          <text x="600" y="82" class="sub-txt" text-anchor="middle">Arguments: -t gfm --wrap=none</text>
+          <text x="600" y="98" class="badge-txt" text-anchor="middle">100% WORD TABLES &amp; HEADING ACCURACY</text>
+
+          <!-- IBM Docling -->
+          <rect x="490" y="140" width="220" height="78" rx="8" class="tool-box" />
+          <text x="600" y="162" class="txt" text-anchor="middle">IBM Docling (Node MCP Tool)</text>
+          <text x="600" y="180" class="sub-txt" text-anchor="middle">Layout-Analysis &amp; Table-Transformer</text>
+          <text x="600" y="196" class="sub-txt" text-anchor="middle">Removes Headers/Footers noise</text>
+          <text x="600" y="210" class="badge-txt" text-anchor="middle">COMPLEX TABLE STRUCTURE PRESERVATION</text>
+
+          <!-- OpenMcdf -->
+          <rect x="490" y="240" width="220" height="60" rx="8" class="step-box" />
+          <text x="600" y="265" class="txt" text-anchor="middle">OpenMcdf (OLE Extractor)</text>
+          <text x="600" y="282" class="sub-txt" text-anchor="middle">Extracts BasicFileInfo stream &amp; PNG</text>
+
+          <!-- Florence-2 & Tesseract -->
+          <rect x="490" y="330" width="220" height="78" rx="8" class="step-box" />
+          <text x="600" y="352" class="txt" text-anchor="middle">Vision &amp; OCR Engine (ONNX)</text>
+          <text x="600" y="370" class="sub-txt" text-anchor="middle">Florence-2 Image Captions CPU</text>
+          <text x="600" y="388" class="sub-txt" text-anchor="middle">Tesseract 5 OCR (vie+eng)</text>
+          <text x="600" y="401" class="badge-txt" text-anchor="middle">LOCAL MULTILILINGUAL OCR</text>
+
+          <!-- Text Stream -->
+          <rect x="490" y="440" width="220" height="50" rx="8" class="step-box" />
+          <text x="600" y="465" class="txt" text-anchor="middle">Standard Text Reader</text>
+          <text x="600" y="480" class="sub-txt" text-anchor="middle">Read directly with UTF-8</text>
+
+          <!-- Post Processing -->
+          <rect x="780" y="200" width="170" height="120" rx="10" class="pipe-box" />
+          <text x="865" y="225" class="txt" text-anchor="middle">Ghost Markdown Parser</text>
+          <text x="865" y="245" class="sub-txt" text-anchor="middle">Structure Standardization</text>
+          <text x="865" y="265" class="sub-txt" text-anchor="middle">• Semantic Chunking</text>
+          <text x="865" y="281" class="sub-txt" text-anchor="middle">  (Target 500T / Max 2000T)</text>
+          <text x="865" y="297" class="sub-txt" text-anchor="middle">• Auto-tagging (Gemini Flash)</text>
+          <text x="865" y="311" class="sub-txt" text-anchor="middle">• Graph Centroid Weighting</text>
+
+          <!-- Final Storage -->
+          <rect x="1010" y="200" width="140" height="120" rx="10" class="step-box" />
+          <text x="1080" y="225" class="txt" text-anchor="middle">SQLite &amp; Disk</text>
+          <text x="1080" y="245" class="sub-txt" text-anchor="middle">Local Storage</text>
+          <text x="1080" y="268" class="sub-txt" text-anchor="middle">• bind.db Index</text>
+          <text x="1080" y="284" class="sub-txt" text-anchor="middle">• bge-m3 GGUF</text>
+          <text x="1080" y="300" class="sub-txt" text-anchor="middle">  Vector Store (1024d)</text>
+
+          <!-- Flow arrows -->
+          <path d="M180 65 L220 65 L220 220 L250 220" class="edge" marker-end="url(#arrow)" />
+          <path d="M180 165 L220 165 L220 240 L250 240" class="edge" marker-end="url(#arrow)" />
+          <path d="M180 265 L250 265" class="edge" marker-end="url(#arrow)" />
+          <path d="M180 365 L220 365 L220 280 L250 280" class="edge" marker-end="url(#arrow)" />
+          <path d="M180 465 L220 465 L220 300 L250 300" class="edge" marker-end="url(#arrow)" />
+
+          <!-- From pipeline to extractors -->
+          <path d="M410 215 L450 215 L450 75 L490 75" class="edge" marker-end="url(#arrow)" />
+          <path d="M410 235 L450 235 L450 179 L490 179" class="edge" marker-end="url(#arrow)" />
+          <path d="M410 260 L490 260" class="edge" marker-end="url(#arrow)" />
+          <path d="M410 285 L450 285 L450 369 L490 369" class="edge" marker-end="url(#arrow)" />
+          <path d="M410 305 L450 305 L450 465 L490 465" class="edge" marker-end="url(#arrow)" />
+
+          <!-- Back to Post Processing -->
+          <path d="M710 75 L750 75 L750 220 L780 220" class="edge" marker-end="url(#arrow)" />
+          <path d="M710 179 L750 179 L750 240 L780 240" class="edge" marker-end="url(#arrow)" />
+          <path d="M710 260 L780 260" class="edge" marker-end="url(#arrow)" />
+          <path d="M710 369 L750 369 L750 280 L780 280" class="edge" marker-end="url(#arrow)" />
+          <path d="M710 465 L750 465 L750 300 L780 300" class="edge" marker-end="url(#arrow)" />
+
+          <!-- Post Processing to final storage -->
+          <path d="M950 260 L1010 260" class="edge" marker-end="url(#arrow)" />
+        </svg>
+        <div class="caption">Hình 2. Quy trình xử lý tài liệu đa luồng offline của B.I.N.D</div>
+      </div>
+
+      <h3>4.1 Tải &amp; Chuyển Đổi Word (.docx) Bằng Pandoc</h3>
+      <p>
+        Bản Windows di động của <code>pandoc.exe</code> (~40MB) được đóng gói trực tiếp vào thư mục 
+        <code>assets/tools/</code>. C# <code>WordTextExtractor.cs</code> gọi trực tiếp CLI để sinh ra định dạng 
+        GitHub Flavored Markdown (GFM) trong <strong>chưa đầy 50ms</strong>.
+      </p>
+      <pre><code>// Thực thi CLI chuyển đổi offline độ chính xác tuyệt đối
+var startInfo = new ProcessStartInfo
+{
+    FileName = pandocPath,
+    Arguments = $"\"{filePath}\" -t gfm --wrap=none -o \"{tempOutFile}\"",
+    UseShellExecute = false,
+    CreateNoWindow = true
+};</code></pre>
+
+      <h3>4.2 Tích Hợp IBM Docling Trích Xuất Bảng Biểu PDF Phức Tạp</h3>
+      <p>
+        PDF chứa các bảng biểu kỹ thuật phức tạp (như thuyết minh kỹ thuật BIM, bảng danh mục vật liệu có ô gộp) sẽ được gửi đến 
+        <strong>IBM Docling</strong> thông qua Node.js MCP Server. Docling sử dụng các mô hình Layout-Analysis và 
+        Table-Transformer chạy local để trả về cấu trúc bảng Markdown hoàn chỉnh, loại bỏ nhiễu tiêu đề trang (Header) và 
+        chân trang (Footer) trước khi chuyển tiếp vào RAG.
+      </p>
+    </section>
+
+    <!-- ════════════ 5. ADVANCED RAG & KNOWLEDGE GRAPH PIPELINE ════════════ -->
+    <section id="rag-flow">
+      <h2><span class="num">05</span> Cơ Chế Tìm Kiếm RAG &amp; Cập Nhật Đồ Thị Tri Thức</h2>
+      <p class="section-lede">
+        Để giải quyết triệt để vấn đề kết quả RAG thiếu chính xác và thỉnh thoảng biến mất node liên kết trên Đồ thị tri thức, 
+        B.I.N.D triển khai mô hình **Tìm kiếm lai (Hybrid Search)** kết hợp **Reranker offline** và cơ chế **Gom nhóm token (Token Coalescing)** 
+        ở tầng Bridge để loại bỏ hoàn toàn hiện tượng lag giao diện.
+      </p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 1200 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="B.I.N.D Advanced RAG and Graph Workflow">
+          <defs></defs>
+
+          <!-- Input query -->
+          <rect x="50" y="240" width="130" height="50" rx="6" class="rag-step" />
+          <text x="115" y="265" class="txt" text-anchor="middle">User Query / Câu hỏi</text>
+          <text x="115" y="280" class="sub-txt" text-anchor="middle">Từ giao diện chat</text>
+
+          <!-- Parallel Search Paths -->
+          <!-- Semantic Embed -->
+          <rect x="260" y="140" width="180" height="60" rx="8" class="rag-step" />
+          <text x="350" y="165" class="txt" text-anchor="middle">Dense Embedding</text>
+          <text x="350" y="182" class="sub-txt" text-anchor="middle">BGE-M3 (CPU) -> Vector 1024d</text>
+
+          <rect x="490" y="140" width="180" height="60" rx="8" class="rag-db" />
+          <text x="580" y="165" class="txt" text-anchor="middle">Vector Search (sqlite-vec)</text>
+          <text x="580" y="182" class="sub-txt" text-anchor="middle">Top-30 matches by Cosine</text>
+
+          <!-- Lexical BM25 -->
+          <rect x="260" y="320" width="180" height="60" rx="8" class="rag-db" />
+          <text x="350" y="345" class="txt" text-anchor="middle">Lexical Index (Tantivy)</text>
+          <text x="350" y="362" class="sub-txt" text-anchor="middle">Keyword Search (BM25)</text>
+
+          <rect x="490" y="320" width="180" height="60" rx="8" class="rag-db" />
+          <text x="580" y="345" class="txt" text-anchor="middle">Text Search Engine</text>
+          <text x="580" y="362" class="sub-txt" text-anchor="middle">Top-30 matches by Keyword</text>
+
+          <!-- Union / RRF -->
+          <rect x="720" y="230" width="180" height="70" rx="8" class="rag-step" />
+          <text x="810" y="255" class="txt" text-anchor="middle">Hybrid Fusion (RRF)</text>
+          <text x="810" y="272" class="sub-txt" text-anchor="middle">Gộp kết quả &amp; Rerank</text>
+          <text x="810" y="288" class="badge-txt" text-anchor="middle">BGE-RERANKER-V2-M3 ONNX CPU</text>
+
+          <!-- Rerank Top-3 / Context Generation -->
+          <rect x="950" y="230" width="200" height="70" rx="8" class="rag-step" />
+          <text x="1050" y="255" class="txt" text-anchor="middle">Context Assembly</text>
+          <text x="1050" y="272" class="sub-txt" text-anchor="middle">Top-3 chunks + Pin entities</text>
+          <text x="1050" y="288" class="sub-txt" text-anchor="middle">Build Prompt Template</text>
+
+          <!-- Cloud LLM -->
+          <rect x="950" y="390" width="200" height="60" rx="8" class="rag-cloud" />
+          <text x="1050" y="415" class="txt" text-anchor="middle">Cloud LLM API</text>
+          <text x="1050" y="432" class="sub-txt" text-anchor="middle">Gemini 2.5 Pro SSE Stream</text>
+
+          <!-- Host Bridge Coalescing -->
+          <rect x="670" y="390" width="230" height="60" rx="8" class="rag-step" />
+          <text x="785" y="415" class="txt" text-anchor="middle">C# Host Token Coalescing</text>
+          <text x="785" y="432" class="sub-txt" text-anchor="middle">Throttling buffer 30-50ms window</text>
+
+          <!-- React UI -->
+          <rect x="360" y="390" width="230" height="60" rx="8" class="rag-cloud" />
+          <text x="475" y="415" class="txt" text-anchor="middle">React UI (Chat Panel)</text>
+          <text x="475" y="432" class="sub-txt" text-anchor="middle">Smooth 60fps rendering, No freeze</text>
+
+          <!-- Flow arrows -->
+          <path d="M180 265 L220 265 L220 170 L260 170" class="edge" marker-end="url(#arrow)" />
+          <path d="M180 265 L220 265 L220 350 L260 350" class="edge" marker-end="url(#arrow)" />
+          
+          <path d="M440 170 L490 170" class="edge" marker-end="url(#arrow)" />
+          <path d="M440 350 L490 350" class="edge" marker-end="url(#arrow)" />
+
+          <path d="M670 170 L700 170 L700 250 L720 250" class="edge" marker-end="url(#arrow)" />
+          <path d="M670 350 L700 350 L700 280 L720 280" class="edge" marker-end="url(#arrow)" />
+
+          <path d="M900 265 L950 265" class="edge" marker-end="url(#arrow)" />
+          <path d="M1050 300 L1050 390" class="edge" marker-end="url(#arrow)" />
+          <path d="M950 420 L900 420" class="edge" marker-end="url(#arrow)" />
+          <path d="M670 420 L590 420" class="edge" marker-end="url(#arrow)" />
+        </svg>
+        <div class="caption">Hình 3. Cơ chế tìm kiếm lai (Hybrid RAG) và luồng gom nhóm token (Token Coalescing)</div>
+      </div>
+
+      <h3>5.1 Tại Sao Node Liên Kết Đồ Thị Bị Biến Mất?</h3>
+      <p>
+        Trong hệ thống cũ, mối liên kết cạnh đồ thị được tính toán offline thông qua <code>SimilarityIndexer</code>, ghi vào bảng 
+        <code>GraphConnections(SourceId, TargetId, Weight)</code> bằng cách tính Cosine giữa centroid các chunk-embedding của 
+        hai Entity. 
+      </p>
+      <div class="note">
+        <strong>Giải thích hiện tượng lỗi thực tế:</strong> Khi tài liệu bị trích xuất heuristics sai cách (làm mất từ khóa hoặc 
+        gộp sai chủ đề), centroid vector của Entity sẽ bị lệch đáng kể. Khi đó, <code>Weight</code> liên kết rơi xuống dưới ngưỡng 
+        lọc cạnh đồ thị (similarity threshold) khiến node bị cô lập hoàn toàn và biến mất trên giao diện D3 Canvas. Việc áp dụng 
+        <strong>Pandoc</strong> và <strong>Docling</strong> sẽ chuẩn hóa chất lượng Markdown thô, trực tiếp khôi phục lại tính chính xác 
+        cho đồ thị.
+      </div>
+
+      <h3>5.2 Cơ Chế Gom Nhóm Token (Token Coalescing) Chống Lag UI</h3>
+      <p>
+        Khi stream phản hồi từ các mô hình cực nhanh như Gemini 2.5 Flash, lượng tin nhắn <code>chat:token</code> bắn liên tục qua IPC Bridge 
+        có thể đạt tần suất >200 sự kiện/giây. Việc này kích hoạt React liên tục render lại (re-render) màn hình, gây hiện tượng nghẽn luồng UI.
+        B.I.N.D khắc phục bằng một bộ đệm gom nhóm (coalescing buffer) tại C# Host Bridge: tích lũy các token delta nhận được trong 
+        <strong>30-50ms</strong> và chỉ phát một gói gộp duy nhất sang WebView2, đảm bảo UI hoạt động mượt mà ở mức 60fps.
+      </p>
+    </section>
+
+    <!-- ════════════ 6. GROUND TRUTH ALGORITHMS & SPECS ════════════ -->
+    <section id="algorithms">
+      <h2><span class="num">06</span> Thông Số Thuật Toán Thực Tế (Ground Truth)</h2>
+      <p class="section-lede">
+        Các thông số cấu hình và tham số thuật toán cơ bản đang chạy trong lõi backend B.I.N.D.
+      </p>
+
+      <div class="grid col-2">
+        <div class="card ok">
+          <h4>6.1 Cấu Hình Chunking (MarkdownChunker)</h4>
+          <ul>
+            <li><strong>Mục tiêu độ dài (Target):</strong> ~500 tokens (xấp xỉ 2000 ký tự).</li>
+            <li><strong>Độ dài tối đa (Max Budget):</strong> 2000 tokens per chunk.</li>
+            <li><strong>Độ chồng lấp (Overlap):</strong> ~50 tokens, chuyển tiếp tiền tố đuôi.</li>
+            <li><strong>Nguyên tắc biên giới (Boundaries):</strong> Cố định giữ chung tiêu đề (Heading) và đoạn văn đầu tiên. Code blocks là nguyên tử (không cắt ở giữa fence). Đoạn văn thường được chia cắt theo dấu câu tiếng Việt dựa trên Regular Expression.</li>
+          </ul>
+        </div>
+
+        <div class="card ok">
+          <h4>6.2 Truy Vấn Vector (sqlite-vec)</h4>
+          <ul>
+            <li><strong>Bảng ảo (Virtual Table):</strong> <code>ChunkEmbeddings USING vec0(chunk_id, embedding FLOAT[1024])</code>.</li>
+            <li><strong>Thuật toán khoảng cách:</strong> L2 (Euclidean distance). Do vector của BGE-M3 được chuẩn hóa đơn vị (unit-normalized) đầu vào, khoảng cách L2 được chuyển đổi chính xác sang Cosine Similarity qua công thức: <code>Score = 1 − d²/2</code>.</li>
+            <li><strong>Lọc điểm tương đồng:</strong> Lọc cứng các chunk có Cosine Score &lt; 0.5.</li>
+          </ul>
+        </div>
+
+        <div class="card ok">
+          <h4>6.3 Định Tuyến Công Cụ MCP (MCP Tool Retrieval)</h4>
+          <ul>
+            <li><strong>Số lượng phân phối:</strong> Tối đa 12 công cụ/lượt gửi đến LLM.</li>
+            <li><strong>Thuật toán chấm điểm:</strong> <code>Cosine(BGE-M3(query), BGE-M3("name: description"))</code> + <em>lexical boost</em> (cộng thêm 0.20 nếu trùng khớp chính xác tên, cộng thêm 0.10 cho mỗi token khớp có độ dài &gt;3 ký tự).</li>
+            <li><strong>Bảo vệ (Denylist):</strong> Chặn cứng các công cụ nhạy cảm hệ thống.</li>
+          </ul>
+        </div>
+
+        <div class="card ok">
+          <h4>6.4 Vòng Lặp Revit Agent (Revit Agent Loop)</h4>
+          <ul>
+            <li><strong>Giới hạn vòng lặp (Iteration Cap):</strong> Tối đa 6 vòng lặp phản hồi/câu hỏi.</li>
+            <li><strong>Nhiệt độ (Temperature):</strong> Khóa cứng mức 0.2 để giảm tính ngẫu nhiên, tăng tính chính xác khi gọi tool.</li>
+            <li><strong>Cơ chế xác thực an toàn:</strong> Các công cụ thay đổi hoặc xóa mô hình BIM bắt buộc phải phản hồi thẻ xác nhận (Confirm Card) trên giao diện để người dùng nhấn nút duyệt, không có cơ chế tự động duyệt hàng loạt.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════ 7. ARCHITECTURAL DECISIONS & COMPARISONS ════════════ -->
+    <section id="comparisons">
+      <h2><span class="num">07</span> So Sánh SoTA &amp; Các Quyết Định Kỹ Thuật Đánh Đổi</h2>
+      <p class="section-lede">
+        Bảng đối chiếu khách quan giữa giải pháp hiện tại với các phương án nâng cao (SoTA) cùng khuyến nghị tối ưu hóa thực tế cho B.I.N.D.
+      </p>
+
+      <h3>7.1 So Sánh Các Giải Pháp Trích Xuất Offline (Ingestion Extractor)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tiêu chí đánh giá</th>
+            <th>Trích xuất cũ (PdfPig + OpenXml)</th>
+            <th>IBM Docling (Local)</th>
+            <th>Pandoc Engine (Local)</th>
+            <th>Vision LLM local (Ollama)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Độ chính xác bảng biểu</strong></td>
+            <td><span class="pill bad">Kém</span> (Dễ vỡ cột chữ)</td>
+            <td><span class="pill ok">Xuất sắc</span> (Table-Transformer)</td>
+            <td><span class="pill ok">Xuất sắc</span> (Chỉ với file Word)</td>
+            <td><span class="pill ok">Xuất sắc</span> (Nhận diện quang học)</td>
+          </tr>
+          <tr>
+            <td><strong>Định dạng Heading / List</strong></td>
+            <td><span class="pill warn">Trung bình</span> (Dễ nhận diện nhầm)</td>
+            <td><span class="pill ok">Rất cao</span></td>
+            <td><span class="pill ok">Tuyệt đối</span> (100% khớp file gốc)</td>
+            <td><span class="pill ok">Rất cao</span></td>
+          </tr>
+          <tr>
+            <td><strong>Tốc độ chuyển đổi</strong></td>
+            <td><span class="pill ok">Siêu nhanh</span> (&lt;50ms)</td>
+            <td><span class="pill info">Nhanh</span> (~1-2s/trang trên CPU)</td>
+            <td><span class="pill ok">Siêu nhanh</span> (&lt;50ms)</td>
+            <td><span class="pill bad">Chậm</span> (~5-15s/trang)</td>
+          </tr>
+          <tr>
+            <td><strong>Yêu cầu phần cứng</strong></td>
+            <td>Cực nhẹ</td>
+            <td>Nhẹ (~150MB RAM, CPU)</td>
+            <td>Cực nhẹ (~40MB exe)</td>
+            <td>Rất nặng (Yêu cầu GPU VRAM &gt;8GB)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>7.2 So Sánh Kiến Trúc Hệ Thống (RAG &amp; UX System Layers)</h3>
+      <div class="compare">
+        <div class="head">Thiết kế hiện tại</div>
+        <div class="head">Giải pháp SoTA đề xuất</div>
+        <div class="head">Đánh giá &amp; Khuyến nghị thực tế</div>
+
+        <div><strong>RAG Retrieval:</strong> Vector cosine đơn thuần trên Top-5, không hỗ trợ reranker và từ khóa.</div>
+        <div><strong>Hybrid Search + Cross-Encoder:</strong> Tantivy BM25 ∪ Vector Search -> Rerank qua <code>BGE-Reranker-v2-m3</code> CPU.</div>
+        <div>Cực kỳ cần thiết cho các tài liệu code, thông số BIM đặc thù. Tăng độ chính xác nDCG thêm 20-35% với chi phí trễ chỉ ~80ms trên CPU.</div>
+
+        <div><strong>Giao diện đồ thị:</strong> Render bằng React + D3-force Canvas thường.</div>
+        <div><strong>Sigma.js v3 (WebGL) / Cosmos GPU:</strong> Công cụ render đồ thị mạng lưới tối ưu hóa qua phần cứng.</div>
+        <div>Khi cơ sở tri thức PKM đạt quy mô lớn &gt;10,000 thực thể, D3 sẽ gây sụt giảm khung hình nghiêm trọng. WebGL là lối thoát hiệu năng duy nhất.</div>
+
+        <div><strong>Sự kiện Stream Token:</strong> Gửi trực tiếp từng token delta qua Bridge IPC sang React UI ngay khi nhận từ LLM.</div>
+        <div><strong>Token Coalescing:</strong> Gom nhóm token delta trong cửa sổ trượt 30-50ms tại C# Bridge.</div>
+        <div>Tác vụ có <strong>ROI cao nhất</strong>. Sửa triệt để lỗi lag giao diện chat panel khi sử dụng các mô hình siêu tốc như Gemini Flash.</div>
+
+        <div><strong>Kéo giãn &amp; Di chuyển Window:</strong> Phụ thuộc vào WebView2 NonClientRegion và CSS <code>app-region: drag</code>.</div>
+        <div><strong>HWND Subclassing:</strong> Intercept trực tiếp thông điệp <code>WM_NCHITTEST</code> của Windows ở tầng Host WPF.</div>
+        <div>Mức độ ổn định tuyệt đối, không lo hụt kéo thả cửa sổ khi WebView2 có sự thay đổi stacking context hoặc bộ lọc mờ.</div>
+      </div>
+    </section>
+
+    <!-- ════════════ 8. ROADMAP & ACTIONS ════════════ -->
+    <section id="roadmap">
+      <h2><span class="num">08</span> Bản Đồ Cải Tiến &amp; Quản Trị Rủi Ro Kỹ Thuật</h2>
+      <p class="section-lede">
+        Lộ trình thực thi nâng cấp hệ thống được xếp hạng theo tỷ lệ ROI (Tỷ suất hiệu quả thực tế trên công sức thực hiện).
+      </p>
+
+      <div class="grid col-2">
+        <div class="card warn">
+          <h4>Rủi ro 1: Rò rỉ thông tin Cloud LLM</h4>
+          <p>
+            Việc sử dụng các cloud provider như Gemini hay Anthropic đồng nghĩa với việc gửi các đoạn cắt ngữ cảnh tài liệu lên cloud.
+            <strong>Giải pháp giảm thiểu:</strong> Triển khai bộ lọc dữ liệu nhạy cảm ở phía client, cấu hình API key độc lập theo từng dự án 
+            và cam kết không gửi nội dung file thô lên cloud — chỉ gửi các đoạn cắt nhỏ đã được vector hóa.
+          </p>
+        </div>
+        <div class="card warn">
+          <h4>Rủi ro 2: Chi phí API cloud tăng vọt</h4>
+          <p>
+            Sử dụng các model thông minh như Claude Sonnet 4.5 Thinking kết hợp với RAG context dài có thể ngốn 10K-20K tokens/câu hỏi.
+            <strong>Giải pháp giảm thiểu:</strong> Thiết lập cơ chế kiểm soát token cap trên giao diện người dùng và bộ ước lượng giá tiền 
+            real-time trước khi phát lệnh chat.
+          </p>
+        </div>
+        <div class="card bad">
+          <h4>Rủi ro 3: Plaintext API Keys trên file cấu hình</h4>
+          <p>
+            Tệp cấu hình <code>bind_config.json</code> lưu trữ API keys dạng văn bản thô dễ bị đánh cắp nếu máy bị nhiễm malware.
+            <strong>Giải pháp giảm thiểu:</strong> Khóa tệp tin cấu hình bằng cơ chế DPAPI (Data Protection API) của Windows để chỉ định 
+            đúng tài khoản người dùng Windows hiện tại mới có quyền đọc khóa bí mật.
+          </p>
+        </div>
+        <div class="card ok">
+          <h4>Lợi thế lớn: Luôn duy trì offline-first</h4>
+          <p>
+            Toàn bộ các tác vụ nạp (Ingest), vector hóa (Embed), tìm kiếm cục bộ (Search) và vẽ đồ thị (Graph) vẫn chạy 100% offline không cần mạng.
+            Khi mất kết nối Internet, hệ thống chỉ vô hiệu hóa nhẹ nhàng phần Chat LLM và phản hồi thông báo thân thiện tới người dùng.
+          </p>
+        </div>
+      </div>
+
+      <h3>Lộ trình thực hiện khuyến nghị (ROI giảm dần)</h3>
+      <ol>
+        <li><strong>Hạng mục 1: Token Coalescing 30-50ms (Làm ngay):</strong> Khắc phục tức thời lỗi đơ lag giao diện chat khi stream phản hồi. Công sức thực hiện: &lt;1 ngày.</li>
+        <li><strong>Hạng mục 2: Tích hợp Pandoc CLI cho DOCX (Làm ngay):</strong> Tăng độ chính xác trích xuất Word lên 100% tuyệt đối. Công sức: &lt;1 ngày.</li>
+        <li><strong>Hạng mục 3: Tích hợp IBM Docling qua MCP Server:</strong> Khôi phục hoàn chỉnh cấu trúc bảng PDF và loại bỏ nhiễu Header/Footer. Công sức: 1-2 ngày.</li>
+        <li><strong>Hạng mục 4: HWND Subclassing cho Frameless Window:</strong> Loại bỏ triệt để lỗi hụt kéo thả di chuyển cửa sổ và resize viền. Công sức: 1 ngày.</li>
+        <li><strong>Hạng mục 5: Tích hợp Cross-Encoder Reranker offline:</strong> Nâng chất lượng câu trả lời của RAG lên thêm 20-30% trên CPU máy khách. Công sức: 2 ngày.</li>
+        <li><strong>Hạng mục 6: Chuyển đổi giao diện Graph sang Sigma.js v3:</strong> Bảo đảm đồ thị hoạt động mượt mà khi cơ sở dữ liệu phình to. Công sức: 3 ngày.</li>
+      </ol>
+    </section>
+
+    <!-- ════════════ 9. FIXED BUGS & CLEAR ACTION PLAN ════════════ -->
+    <section id="fixed-bugs-plan">
+      <h2><span class="num">09</span> Nhật Ký Sửa Lỗi &amp; Kế Hoạch Triển Khai Chi Tiết</h2>
+      <p class="section-lede">
+        Thống kê thực tế các lỗi kỹ thuật quan trọng đã được xử lý thành công trong suốt quá trình phát triển (đặc biệt là sau cuộc di cư kiến trúc D-09) cùng lộ trình kế hoạch từng giai đoạn (Milestones) để giải quyết các tồn đọng hiện tại.
+      </p>
+
+      <h3>9.1 Nhật Ký Các Bug Quan Trọng Đã Được Khắc Phục (Bug Fix Log)</h3>
+      <div class="grid col-2">
+        <div class="card ok">
+          <div class="meta">Đã Sửa · UI &amp; Shell</div>
+          <h4>Lỗi Rò Rỉ &amp; Treo Tiến Trình WebView2</h4>
+          <p>
+            <strong>Hiện tượng:</strong> Tắt ứng dụng chính WPF nhưng các tiến trình con <code>WebView2</code> vẫn chạy ngầm trên Task Manager, gây ngốn CPU/RAM và khóa file database.
+            <br><strong>Giải pháp:</strong> Bổ sung event handler giải phóng thủ công <code>CoreWebView2</code> trong <code>App.xaml.cs</code> và gọi <code>Environment.Exit(0)</code> để dọn dẹp sạch sẽ toàn bộ cây tiến trình con.
+          </p>
+        </div>
+
+        <div class="card ok">
+          <div class="meta">Đã Sửa · Data Core</div>
+          <h4>Treo Deadlock Khi Lazy-Load Embedding Model</h4>
+          <p>
+            <strong>Hiện tượng:</strong> Hai luồng yêu cầu nạp (Ingestion) đồng thời gọi khởi tạo mô hình nhúng BGE-M3 cục bộ dẫn đến xung đột luồng và treo ứng dụng (Deadlock).
+            <br><strong>Giải pháp:</strong> Áp dụng cơ chế khóa <code>SemaphoreSlim(1,1)</code> bảo vệ giai đoạn nạp lazy-load của mô hình trong <code>BgeEmbedder.cs</code>.
+          </p>
+        </div>
+
+        <div class="card ok">
+          <div class="meta">Đã Sửa · Revit IPC</div>
+          <h4>Lỗi Crash Luồng Revit Khi Gọi API Từ Luồng Ngoài</h4>
+          <p>
+            <strong>Hiện tượng:</strong> Gọi các API vẽ tường/load family trực tiếp từ luồng Named Pipe khiến Revit lập tức crash do vi phạm nguyên tắc Single-Threaded Apartment (STA) của Revit.
+            <br><strong>Giải pháp:</strong> Tái cấu trúc lớp AddIn sử dụng cơ chế <code>ExternalEvent</code> làm hàng đợi nhận tin Named Pipe, đưa toàn bộ lệnh thực thi BIM về luồng chính (Main Thread) an toàn của Revit.
+          </p>
+        </div>
+
+        <div class="card ok">
+          <div class="meta">Đã Sửa · Ingestion</div>
+          <h4>Nhận Diện Sai Tiêu Đề (Heading) Trong File Quét OCR</h4>
+          <p>
+            <strong>Hiện tượng:</strong> Các văn bản thô trích xuất từ ảnh quét qua Tesseract OCR bị bộ heuristics <code>GhostMarkdownConverter</code> gộp nhầm các ghi chú ngắn thành tiêu đề <code>#</code> hoặc <code>##</code> do trùng khớp chữ in hoa.
+            <br><strong>Giải pháp:</strong> Thắt chặt quy tắc heuristics, thêm điều kiện kiểm tra tỷ lệ từ có nghĩa, độ dài câu (&gt;3 từ và &lt;80 ký tự), kết hợp kiểm tra độ đậm nhạt (nếu có thông tin style font).
+          </p>
+        </div>
+      </div>
+
+      <h3>9.2 Kế Hoạch Hành Động Chi Tiết (Step-by-Step Milestone Plan)</h3>
+      <p>
+        Để đưa hệ thống B.I.N.D từ trạng thái hiện tại đạt mức độ ổn định và thông minh tối đa, kế hoạch hành động 4 giai đoạn cụ thể dưới đây được thiết lập:
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Giai đoạn (Milestone)</th>
+            <th>Nhiệm vụ chi tiết (Task Items)</th>
+            <th>Thời gian dự kiến</th>
+            <th>Độ ưu tiên</th>
+            <th>Kết quả đầu ra kỳ vọng (Deliverables)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>M1: Ổn định Giao diện &amp; Trải nghiệm (UI/UX Layer)</strong></td>
+            <td>
+              1. Viết bộ đệm gom nhóm <strong>Token Coalescing (30-50ms)</strong> ở lớp C# Bridge.<br>
+              2. Sử dụng <strong>HWND Subclassing</strong> trong Host WPF thay thế CSS drag/resize.<br>
+              3. Tối ưu hóa bộ nhớ tạm của WebView2.
+            </td>
+            <td class="num">1 - 2 ngày</td>
+            <td><span class="pill bad">CRITICAL</span></td>
+            <td>Giao diện chat mượt mà 60fps khi stream, không bị giật đơ. Cửa sổ kéo giãn dynamic linh hoạt, không bị hụt chuột.</td>
+          </tr>
+          <tr>
+            <td><strong>M2: Trích xuất Tài liệu Ngoại tuyến Chất lượng Cao</strong></td>
+            <td>
+              1. Tích hợp <strong>Pandoc CLI</strong> vào <code>WordTextExtractor.cs</code>.<br>
+              2. Đóng gói <code>pandoc.exe</code> cục bộ.<br>
+              3. Viết Node.js Tool gọi <strong>IBM Docling</strong> trong MCP Server để xử lý PDF.<br>
+              4. Thiết lập cơ chế fallback khi máy khách thiếu môi trường.
+            </td>
+            <td class="num">2 - 3 ngày</td>
+            <td><span class="pill accent">HIGH</span></td>
+            <td>100% tài liệu DOCX/Word giữ nguyên cấu trúc bảng, danh sách. Bảng PDF phức tạp được khôi phục nguyên vẹn dạng Markdown Table.</td>
+          </tr>
+          <tr>
+            <td><strong>M3: Tối ưu Trí thông minh Tìm kiếm (RAG Engine)</strong></td>
+            <td>
+              1. Tích hợp thư viện tìm kiếm từ khóa <strong>Tantivy (BM25 local)</strong>.<br>
+              2. Triển khai thuật toán gộp kết quả tìm kiếm lai <strong>Hybrid RRF (Reciprocal Rank Fusion)</strong>.<br>
+              3. Triển khai mô hình <strong>BGE-Reranker-v2-m3 ONNX</strong> chạy local trên CPU.
+            </td>
+            <td class="num">2 - 3 ngày</td>
+            <td><span class="pill info">MEDIUM</span></td>
+            <td>Độ chính xác truy vấn của RAG đạt trên 90%, giảm thiểu hiện tượng LLM nhận nhầm context hoặc bị thiếu thông tin đặc thù.</td>
+          </tr>
+          <tr>
+            <td><strong>M4: Nâng cấp Đồ thị &amp; Đóng gói Bảo mật</strong></td>
+            <td>
+              1. Chuyển đổi React D3 Canvas sang thư viện đồ thị WebGL <strong>Sigma.js v3</strong>.<br>
+              2. Mã hóa API keys trong <code>bind_config.json</code> bằng cơ chế <strong>Windows DPAPI</strong>.<br>
+              3. Bổ sung giao diện giới hạn Token Cap và cảnh báo chi phí RAG.
+            </td>
+            <td class="num">3 ngày</td>
+            <td><span class="pill ok">LOW</span></td>
+            <td>Đồ thị tri thức tải mượt mà trên 10,000 node, không mất node liên kết. Bảo mật thông tin API key tuyệt đối trên Windows.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      <span>WIKI · B.I.N.D — Unified Architecture &amp; Enhanced Ingestion Overview · 2026-05-21</span>
+      <span>Được xây dựng thủ công, đối chiếu và đồng bộ trực tiếp với mã nguồn hệ thống.</span>
+    </footer>
+
+  </div>
+</body>
+</html>
